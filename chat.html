@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>E1 · 채팅</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root { --bg:#000; --violet:#7c5cff; --violet-soft:#a78bfa; --text:#e9e6f5; --muted:#8a85a3; --line:#2a2540; --panel:#0b0912; --mine:#5b3fd6; --other:#15111f; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top,0); }
+  button { font-family: inherit; cursor: pointer; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--line); flex: none; }
+  header img { width:34px; height:34px; }
+  .nav { display:flex; align-items:center; gap:8px; font-size:14px; }
+  .ghost { background:none; border:1px solid var(--line); color:var(--muted); padding:7px 12px; border-radius:8px; font-size:13px; text-decoration:none; }
+  .ghost:hover { color:var(--text); border-color:var(--violet); }
+  .ghost.on { color:#fff; background:var(--violet); border-color:var(--violet); }
+
+  #list { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .day { align-self: center; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  .msg { max-width: 82%; display: flex; flex-direction: column; }
+  .msg .name { font-size: 12px; color: var(--violet-soft); margin: 0 4px 3px; }
+  .bubble { padding: 9px 13px; border-radius: 16px; line-height: 1.5; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--other); border-top-left-radius: 4px; }
+  .meta { font-size: 11px; color: var(--muted); margin: 3px 4px 0; display: flex; gap: 8px; }
+  .meta button { background: none; border: 0; color: var(--muted); font-size: 11px; padding: 0; }
+  .msg.mine { align-self: flex-end; align-items: flex-end; }
+  .msg.mine .bubble { background: var(--mine); border-top-left-radius: 16px; border-top-right-radius: 4px; }
+  .empty { margin: auto; color: var(--muted); font-size: 14px; }
+
+  form { flex: none; display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom,0)); border-top: 1px solid var(--line); background: var(--bg); }
+  input { flex: 1; min-width: 0; padding: 13px 15px; font-size: 16px; font-family: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; outline: none; }
+  input:focus { border-color: var(--violet); }
+  #send { flex: none; padding: 0 18px; font-size: 15px; font-weight: 600; color: #fff; background: var(--violet); border: 0; border-radius: 22px; }
+  #send:disabled { opacity: .5; }
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="E1">
+  <div class="nav">
+    <a class="ghost" href="main.html">게시판</a>
+    <span class="ghost on">채팅</span>
+    <button class="ghost" id="logout">로그아웃</button>
+  </div>
+</header>
+
+<div id="list"><div class="empty" id="empty">불러오는 중...</div></div>
+
+<form id="form">
+  <input id="text" placeholder="메시지 입력" maxlength="500" autocomplete="off" required>
+  <button id="send" type="submit">전송</button>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  const list = $("list");
+  const names = {};          // 작성자 id → 닉네임
+  const shown = new Set();   // 이미 화면에 있는 메시지 id
+  let me = null, lastId = 0, lastDay = "";
+
+  const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
+  const toBottom = () => { list.scrollTop = list.scrollHeight; };
+
+  function addMessage(m) {
+    if (shown.has(m.id)) return;
+    shown.add(m.id); lastId = Math.max(lastId, m.id);
+    const stick = nearBottom() || m.author_id === me.id;
+    $("empty")?.remove();
+
+    const d = new Date(m.created_at);
+    const day = d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+    if (day !== lastDay) {
+      lastDay = day;
+      const dv = document.createElement("div"); dv.className = "day"; dv.textContent = day; list.appendChild(dv);
+    }
+
+    const mine = m.author_id === me.id;
+    const box = document.createElement("div"); box.className = "msg" + (mine ? " mine" : ""); box.dataset.id = m.id;
+    if (!mine) { const n = document.createElement("div"); n.className = "name"; n.textContent = names[m.author_id] || "회원"; box.appendChild(n); }
+    const b = document.createElement("div"); b.className = "bubble"; b.textContent = m.content; box.appendChild(b);
+    const meta = document.createElement("div"); meta.className = "meta";
+    meta.append(d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }));
+    if (mine) {
+      const del = document.createElement("button"); del.textContent = "삭제";
+      del.onclick = async () => { if (confirm("이 메시지를 삭제할까요?")) await sb.from("messages").delete().eq("id", m.id); removeMessage(m.id); };
+      meta.appendChild(del);
+    }
+    box.appendChild(meta); list.appendChild(box);
+    if (stick) toBottom();
+  }
+  function removeMessage(id) { list.querySelector('.msg[data-id="' + id + '"]')?.remove(); shown.delete(id); }
+
+  async function fetchNames(ids) {
+    const need = ids.filter(i => !names[i]);
+    if (!need.length) return;
+    const { data } = await sb.from("profiles").select("id,nickname").in("id", need);
+    (data || []).forEach(p => names[p.id] = p.nickname);
+  }
+
+  async function loadRecent() {
+    const { data, error } = await sb.from("messages").select("id,author_id,content,created_at").order("id", { ascending: false }).limit(60);
+    if (error) { $("empty").textContent = "불러오지 못했어요: " + error.message; return; }
+    const rows = data.reverse();
+    await fetchNames([...new Set(rows.map(r => r.author_id))]);
+    if (!rows.length) { $("empty").textContent = "아직 대화가 없어요. 첫 메시지를 보내 보세요."; return; }
+    rows.forEach(addMessage); toBottom();
+  }
+  async function syncMissed() {          // 화면을 껐다 켰을 때 놓친 메시지 채우기
+    const { data } = await sb.from("messages").select("id,author_id,content,created_at").gt("id", lastId).order("id");
+    if (data?.length) { await fetchNames([...new Set(data.map(r => r.author_id))]); data.forEach(addMessage); }
+  }
+
+  async function init() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) { location.replace("index.html"); return; }
+    me = data.session.user;
+    const { data: p } = await sb.from("profiles").select("nickname").eq("id", me.id).maybeSingle();
+    if (!p) { location.replace("main.html"); return; }   // 닉네임부터 정하기
+    names[me.id] = p.nickname;
+
+    await loadRecent();
+    sb.channel("chat-room")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (e) => {
+        await fetchNames([e.new.author_id]); addMessage(e.new);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (e) => removeMessage(e.old.id))
+      .subscribe();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) syncMissed(); });
+  }
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const content = $("text").value.trim();
+    if (!content) return;
+    $("send").disabled = true;
+    const { data, error } = await sb.from("messages").insert({ content }).select("id,author_id,content,created_at").single();
+    $("send").disabled = false;
+    if (error) { alert("전송하지 못했어요: " + error.message); return; }
+    $("text").value = ""; addMessage(data); $("text").focus();
+  });
+  $("logout").onclick = async () => { await sb.auth.signOut(); location.replace("index.html"); };
+
+  init();
+</script>
+</body>
+</html>
