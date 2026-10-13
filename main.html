@@ -55,6 +55,7 @@
   .detail .body { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.75; font-size:16px; }
   .row { display:flex; gap:8px; margin-top:24px; }
   .row > * { flex:1; }
+.adm{color:#ff5a6e;font-weight:700}.badge{margin-left:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#fff;background:#d6334a;border-radius:6px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -120,18 +121,29 @@
 <script>
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
-  let user = null, isAdmin = false, nickname = "", categories = [], currentCat = null, currentPost = null;
+  let user = null, isAdmin = false, adminIds = new Set(), nickname = "", categories = [], currentCat = null, currentPost = null;
 
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
   const show = (name) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== name));
+
+  function nameEl(nick, id) {
+    const w = document.createElement("span"), s = document.createElement("span");
+    s.textContent = nick; w.appendChild(s);
+    if (adminIds.has(id)) {
+      s.className = "adm";
+      const b = document.createElement("span"); b.className = "badge"; b.textContent = "관리자"; w.appendChild(b);
+    }
+    return w;
+  }
 
   /* ---------- 시작: 로그인 확인 + 프로필 ---------- */
   async function init() {
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace("index.html"); return; }
     user = data.session.user;
-    const a = await sb.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
-    isAdmin = !!a.data;
+    const a = await sb.from("admins").select("user_id");
+    adminIds = new Set((a.data || []).map(r => r.user_id));
+    isAdmin = adminIds.has(user.id);
     const { data: p } = await sb.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
     if (p) enterBoard(p.nickname); else $("nick-view").classList.remove("hidden");
   }
@@ -140,6 +152,7 @@
     $("nick-view").classList.add("hidden");
     $("board-view").classList.remove("hidden");
     $("me").textContent = n;
+    $("me").classList.toggle("adm", isAdmin);
     $("admin-link").classList.toggle("hidden", !isAdmin);
     await loadCategories();
     await loadPosts();
@@ -182,7 +195,7 @@
   async function loadPosts() {
     show("list");
     const box = $("posts"); box.replaceChildren();
-    let q = sb.from("posts").select("id,title,created_at,categories(name),profiles(nickname)").order("created_at", { ascending: false }).limit(50);
+    let q = sb.from("posts").select("id,title,created_at,author_id,categories(name),profiles(nickname)").order("created_at", { ascending: false }).limit(50);
     if (currentCat) q = q.eq("category_id", currentCat);
     const { data, error } = await q;
     if (error) { box.innerHTML = ""; const d = document.createElement("div"); d.className = "empty"; d.textContent = "불러오지 못했어요: " + error.message; box.appendChild(d); return; }
@@ -192,7 +205,7 @@
       const t = document.createElement("div"); t.className = "t"; t.textContent = p.title;
       const m = document.createElement("div"); m.className = "m";
       const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = p.categories ? p.categories.name : "";
-      m.append(tag, " · " + (p.profiles ? p.profiles.nickname : "탈퇴한 회원") + " · " + fmt(p.created_at));
+      m.append(tag, " · ", nameEl(p.profiles ? p.profiles.nickname : "탈퇴한 회원", p.author_id), " · " + fmt(p.created_at));
       b.append(t, m); b.onclick = () => openPost(p.id); box.appendChild(b);
     });
   }
@@ -203,7 +216,7 @@
     if (error) { alert("글을 불러오지 못했어요."); return; }
     currentPost = data;
     $("d-title").textContent = data.title;
-    $("d-meta").textContent = (data.categories ? data.categories.name + " · " : "") + (data.profiles ? data.profiles.nickname : "탈퇴한 회원") + " · " + fmt(data.created_at);
+    $("d-meta").replaceChildren((data.categories ? data.categories.name + " · " : ""), nameEl(data.profiles ? data.profiles.nickname : "탈퇴한 회원", data.author_id), " · " + fmt(data.created_at));
     $("d-body").textContent = data.content;
     $("d-del").classList.toggle("hidden", data.author_id !== user.id && !isAdmin);
     show("detail"); window.scrollTo(0, 0);

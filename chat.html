@@ -35,6 +35,7 @@
   input:focus { border-color: var(--violet); }
   #send { flex: none; padding: 0 18px; font-size: 15px; font-weight: 600; color: #fff; background: var(--violet); border: 0; border-radius: 22px; }
   #send:disabled { opacity: .5; }
+.adm{color:#ff5a6e;font-weight:700}.badge{margin-left:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#fff;background:#d6334a;border-radius:6px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -62,7 +63,17 @@
   const list = $("list");
   const names = {};          // 작성자 id → 닉네임
   const shown = new Set();   // 이미 화면에 있는 메시지 id
-  let me = null, isAdmin = false, lastId = 0, lastDay = "";
+  let me = null, isAdmin = false, adminIds = new Set(), lastId = 0, lastDay = "";
+
+  function nameEl(nick, id) {
+    const w = document.createElement("span"), s = document.createElement("span");
+    s.textContent = nick; w.appendChild(s);
+    if (adminIds.has(id)) {
+      s.className = "adm";
+      const b = document.createElement("span"); b.className = "badge"; b.textContent = "관리자"; w.appendChild(b);
+    }
+    return w;
+  }
 
   const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
   const toBottom = () => { list.scrollTop = list.scrollHeight; };
@@ -82,7 +93,7 @@
 
     const mine = m.author_id === me.id;
     const box = document.createElement("div"); box.className = "msg" + (mine ? " mine" : ""); box.dataset.id = m.id;
-    if (!mine) { const n = document.createElement("div"); n.className = "name"; n.textContent = names[m.author_id] || "회원"; box.appendChild(n); }
+    if (!mine) { const n = document.createElement("div"); n.className = "name"; n.appendChild(nameEl(names[m.author_id] || "회원", m.author_id)); box.appendChild(n); }
     const b = document.createElement("div"); b.className = "bubble"; b.textContent = m.content; box.appendChild(b);
     const meta = document.createElement("div"); meta.className = "meta";
     meta.append(d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }));
@@ -120,8 +131,9 @@
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace("index.html"); return; }
     me = data.session.user;
-    const a = await sb.from("admins").select("user_id").eq("user_id", me.id).maybeSingle();
-    isAdmin = !!a.data;
+    const a = await sb.from("admins").select("user_id");
+    adminIds = new Set((a.data || []).map(r => r.user_id));
+    isAdmin = adminIds.has(me.id);
     const { data: p } = await sb.from("profiles").select("nickname").eq("id", me.id).maybeSingle();
     if (!p) { location.replace("main.html"); return; }   // 닉네임부터 정하기
     names[me.id] = p.nickname;
