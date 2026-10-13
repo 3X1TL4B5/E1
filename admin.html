@@ -20,7 +20,7 @@
   .ghost.on { color:#fff; background:var(--violet); border-color:var(--violet); }
   .wrap { max-width:720px; margin:0 auto; padding:16px; }
   .tabs { display:flex; gap:8px; margin-bottom:16px; }
-  .tabs .ghost { flex:1; padding:10px; font-size:14px; }
+  .tabs .ghost { flex:1; padding:10px 4px; font-size:13px; }
   .item { display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); }
   .item .info { flex:1; min-width:0; }
   .item .t { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
@@ -43,6 +43,7 @@
 <div class="wrap">
   <div class="tabs">
     <button class="ghost on" data-tab="members">회원</button>
+    <button class="ghost" data-tab="invites">초대</button>
     <button class="ghost" data-tab="categories">카테고리</button>
     <button class="ghost" data-tab="reserved">금지어</button>
   </div>
@@ -96,6 +97,48 @@
     });
   }
 
+  /* 초대 링크 */
+  function inviteUrl(code) { const u = new URL("signup.html", location.href); u.search = "?code=" + code; return u.href; }
+  function copyInvite(code) {
+    const url = inviteUrl(code);
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => alert("링크를 복사했어요.")).catch(() => prompt("복사해서 전달하세요", url));
+  }
+  async function loadInvites() {
+    const { data, error } = await sb.from("invite_links").select("id,code,label,max_uses,used_count,expires_at,active").order("id", { ascending: false });
+    if (error) return empty("불러오지 못했어요: " + error.message);
+    panel.replaceChildren();
+    const hint = document.createElement("p"); hint.className = "hint";
+    hint.textContent = "인원과 기간을 비우면 제한이 없어요. 무제한 링크가 퍼지면 아무나 들어올 수 있으니, 이상하면 바로 끄세요.";
+    const f = document.createElement("form"); f.style.flexDirection = "column";
+    const mk = (ph, type) => { const i = document.createElement("input"); i.placeholder = ph; if (type) { i.type = type; i.min = 1; i.inputMode = "numeric"; } return i; };
+    const label = mk("이름 (예: 10월 이벤트)"), max = mk("최대 인원 (비우면 무제한)", "number"), days = mk("유효 기간 일 수 (비우면 무기한)", "number");
+    label.maxLength = 30;
+    const a = document.createElement("button"); a.className = "add"; a.style.padding = "12px"; a.textContent = "링크 만들기";
+    f.append(label, max, days, a);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const m = max.value ? parseInt(max.value, 10) : null, d = days.value ? parseInt(days.value, 10) : null;
+      if (!m && !d && !confirm("인원과 기간이 모두 무제한이에요. 링크가 퍼지면 아무나 가입할 수 있어요. 그래도 만들까요?")) return;
+      const row = { label: label.value.trim() || null, max_uses: m, expires_at: d ? new Date(Date.now() + d * 86400000).toISOString() : null };
+      const r = await sb.from("invite_links").insert(row).select("code").single();
+      if (r.error) return alert(r.error.message);
+      copyInvite(r.data.code); loadInvites();
+    };
+    panel.append(hint, f);
+    if (!data.length) { const d = document.createElement("div"); d.className = "empty"; d.textContent = "만든 링크가 없어요."; panel.appendChild(d); return; }
+    const now = Date.now();
+    data.forEach(l => {
+      const expired = l.expires_at && new Date(l.expires_at) < now, full = l.max_uses && l.used_count >= l.max_uses;
+      const status = !l.active ? "꺼짐" : expired ? "만료" : full ? "마감" : "";
+      const sub = l.used_count + "/" + (l.max_uses || "∞") + "명 · " + (l.expires_at ? new Date(l.expires_at).toLocaleDateString("ko-KR") + "까지" : "기간 제한 없음");
+      panel.appendChild(item(l.label || "이름 없음", sub, status, [
+        { label: "복사", fn: () => copyInvite(l.code) },
+        { label: l.active ? "끄기" : "켜기", danger: l.active, fn: async () => { const { error } = await sb.from("invite_links").update({ active: !l.active }).eq("id", l.id); if (error) return alert(error.message); loadInvites(); } },
+        { label: "삭제", danger: true, fn: async () => { if (!confirm("이 링크를 삭제할까요? 이미 가입한 회원에게는 영향이 없어요.")) return; const { error } = await sb.from("invite_links").delete().eq("id", l.id); if (error) return alert(error.message); loadInvites(); } }
+      ]));
+    });
+  }
+
   /* 카테고리 */
   async function loadCategories() {
     const { data, error } = await sb.from("categories").select("id,name").order("name");
@@ -146,7 +189,7 @@
     } }])));
   }
 
-  const tabs = { members: loadMembers, categories: loadCategories, reserved: loadReserved };
+  const tabs = { members: loadMembers, invites: loadInvites, categories: loadCategories, reserved: loadReserved };
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
     document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
     empty("불러오는 중..."); tabs[b.dataset.tab]();

@@ -79,13 +79,14 @@
   </form>
   <p id="msg" role="alert"></p>
   <p class="note">초대받은 회원만 입장할 수 있어요.</p>
+  <p class="note" style="margin-top:10px"><a href="reset-password.html" style="color:var(--violet-soft)">비밀번호를 잊으셨나요?</a></p>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
   // ▼ Supabase 대시보드 → Project Settings → API 에서 복사해 붙여넣기
-  const SUPABASE_URL = "https://shwvlpchvsrsheycfmzc.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNod3ZscGNodnNyc2hleWNmbXpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MjAxMzMsImV4cCI6MjEwNzM5NjEzM30.IP-LZ5Arcy8jM4iORjwVg9yDSbJWlDvLigOeFG5Ap_k";
+  const SUPABASE_URL = "여기에_Project_URL";
+  const SUPABASE_ANON_KEY = "여기에_anon_public_key";
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const msg = document.getElementById("msg");
