@@ -150,7 +150,10 @@
     btn.disabled = true;
     const { error } = await sb.from("profiles").insert({ id: user.id, nickname: n });
     btn.disabled = false;
-    if (error) { msg.textContent = error.code === "23505" ? "이미 사용 중인 닉네임이에요." : "저장하지 못했어요: " + (error.message || error.code); return; }
+    if (error) { if (error.code === "23505") msg.textContent = "이미 사용 중인 닉네임이에요.";
+      else if ((error.message || "").includes("reserved_nickname")) msg.textContent = "사용할 수 없는 닉네임이에요.";
+      else msg.textContent = "저장하지 못했어요: " + (error.message || error.code);
+      return; }
     enterBoard(n);
   });
   $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.replace("index.html"); });
