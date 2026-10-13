@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>E1</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root {
+    --bg: #000; --violet: #7c5cff; --violet-soft: #a78bfa;
+    --text: #e9e6f5; --muted: #8a85a3; --line: #2a2540; --danger: #ff6b81;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+  .hidden { display: none !important; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    position: sticky; top: env(safe-area-inset-top, 0); background: var(--bg);
+  }
+  header img { width: 36px; height: 36px; }
+  .who { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+  .who b { color: var(--text); font-weight: 600; }
+  .ghost {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    padding: 7px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .ghost:hover { color: var(--text); border-color: var(--violet); }
+
+  .center { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { width: 100%; max-width: 340px; text-align: center; }
+  .card img { width: 120px; height: 120px; filter: drop-shadow(0 0 24px rgba(124,92,255,.45)); }
+  h1 { font-size: 20px; margin: 16px 0 8px; }
+  .sub { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 24px; }
+
+  form { display: grid; gap: 12px; }
+  input {
+    width: 100%; padding: 15px 16px; font-size: 16px; color: var(--text);
+    background: #0b0912; border: 1px solid var(--line); border-radius: 10px; outline: none;
+  }
+  input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(124,92,255,.25); }
+  .primary {
+    padding: 15px; font-size: 16px; font-weight: 600; color: #fff;
+    background: var(--violet); border: 0; border-radius: 10px; cursor: pointer;
+  }
+  .primary:hover { background: #6a49f0; }
+  .primary:disabled { opacity: .6; cursor: default; }
+  #msg { min-height: 20px; margin: 14px 0 0; font-size: 14px; color: var(--danger); }
+
+  .board { max-width: 720px; margin: 0 auto; padding: 32px 16px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- 1) 닉네임 정하기 (처음 로그인했을 때만) -->
+<section id="nick-view" class="center hidden">
+  <div class="card">
+    <img src="logo.png" alt="E1">
+    <h1>닉네임을 정해 주세요</h1>
+    <p class="sub">게시판에는 이메일 대신 닉네임만 보여요.<br>한글·영문·숫자·_ 로 2~12자</p>
+    <form id="nick-form">
+      <input id="nick" type="text" placeholder="닉네임" maxlength="12" autocomplete="off" required>
+      <button class="primary" id="nick-btn" type="submit">시작하기</button>
+    </form>
+    <p id="msg" role="alert"></p>
+  </div>
+</section>
+
+<!-- 2) 게시판 (닉네임 설정이 끝난 회원) -->
+<section id="board-view" class="hidden">
+  <header>
+    <img src="logo.png" alt="E1">
+    <div class="who"><span><b id="me"></b> 님</span><button class="ghost" id="logout">로그아웃</button></div>
+  </header>
+  <div class="board">
+    <p>게시판을 준비 중이에요.</p>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  let user = null;
+
+  function showBoard(nickname) {
+    $("nick-view").classList.add("hidden");
+    $("board-view").classList.remove("hidden");
+    $("me").textContent = nickname;   // textContent 로 넣어서 코드 삽입을 막아요
+  }
+
+  async function init() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) { location.replace("index.html"); return; }   // 로그인 안 했으면 쫓아내기
+    user = data.session.user;
+
+    const { data: profile } = await sb.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+    if (profile) showBoard(profile.nickname);
+    else $("nick-view").classList.remove("hidden");
+  }
+
+  $("nick-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nickname = $("nick").value.trim();
+    const msg = $("msg"), btn = $("nick-btn");
+    msg.textContent = "";
+    if (!/^[가-힣A-Za-z0-9_]{2,12}$/.test(nickname)) {
+      msg.textContent = "한글·영문·숫자·_ 로 2~12자만 쓸 수 있어요.";
+      return;
+    }
+    btn.disabled = true;
+    const { error } = await sb.from("profiles").insert({ id: user.id, nickname });
+    btn.disabled = false;
+    if (error) {
+      msg.textContent = error.code === "23505" ? "이미 사용 중인 닉네임이에요." : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+      return;
+    }
+    showBoard(nickname);
+  });
+
+  $("logout").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    location.replace("index.html");
+  });
+
+  init();
+</script>
+</body>
+</html>
