@@ -62,7 +62,7 @@
   const list = $("list");
   const names = {};          // 작성자 id → 닉네임
   const shown = new Set();   // 이미 화면에 있는 메시지 id
-  let me = null, lastId = 0, lastDay = "";
+  let me = null, isAdmin = false, lastId = 0, lastDay = "";
 
   const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
   const toBottom = () => { list.scrollTop = list.scrollHeight; };
@@ -86,7 +86,7 @@
     const b = document.createElement("div"); b.className = "bubble"; b.textContent = m.content; box.appendChild(b);
     const meta = document.createElement("div"); meta.className = "meta";
     meta.append(d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }));
-    if (mine) {
+    if (mine || isAdmin) {
       const del = document.createElement("button"); del.textContent = "삭제";
       del.onclick = async () => { if (confirm("이 메시지를 삭제할까요?")) await sb.from("messages").delete().eq("id", m.id); removeMessage(m.id); };
       meta.appendChild(del);
@@ -120,6 +120,8 @@
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace("index.html"); return; }
     me = data.session.user;
+    const a = await sb.from("admins").select("user_id").eq("user_id", me.id).maybeSingle();
+    isAdmin = !!a.data;
     const { data: p } = await sb.from("profiles").select("nickname").eq("id", me.id).maybeSingle();
     if (!p) { location.replace("main.html"); return; }   // 닉네임부터 정하기
     names[me.id] = p.nickname;
@@ -141,7 +143,7 @@
     $("send").disabled = true;
     const { data, error } = await sb.from("messages").insert({ content }).select("id,author_id,content,created_at").single();
     $("send").disabled = false;
-    if (error) { alert("전송하지 못했어요: " + error.message); return; }
+    if (error) { alert((error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : "전송하지 못했어요: " + error.message); return; }
     $("text").value = ""; addMessage(data); $("text").focus();
   });
   $("logout").onclick = async () => { await sb.auth.signOut(); location.replace("index.html"); };

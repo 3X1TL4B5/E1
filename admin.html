@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>E1 · 관리</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root { --bg:#000; --violet:#7c5cff; --violet-soft:#a78bfa; --text:#e9e6f5; --muted:#8a85a3; --line:#2a2540; --panel:#0b0912; --danger:#ff6b81; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); }
+  button { font-family:inherit; cursor:pointer; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header img { width:34px; height:34px; }
+  .nav { display:flex; gap:8px; }
+  .ghost { background:none; border:1px solid var(--line); color:var(--muted); padding:7px 12px; border-radius:8px; font-size:13px; text-decoration:none; }
+  .ghost:hover { color:var(--text); border-color:var(--violet); }
+  .ghost.danger { color:var(--danger); border-color:#4a2530; }
+  .ghost.on { color:#fff; background:var(--violet); border-color:var(--violet); }
+  .wrap { max-width:720px; margin:0 auto; padding:16px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs .ghost { flex:1; padding:10px; font-size:14px; }
+  .item { display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); }
+  .item .info { flex:1; min-width:0; }
+  .item .t { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+  .item .s { font-size:12px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
+  .item .btns { display:flex; gap:6px; flex:none; }
+  .tag { color:var(--danger); font-weight:400; font-size:12px; }
+  .hint { font-size:13px; color:var(--muted); line-height:1.6; margin:0 0 12px; }
+  form { display:flex; gap:8px; margin-bottom:12px; }
+  input { flex:1; min-width:0; padding:12px 14px; font-size:16px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:10px; outline:none; }
+  input:focus { border-color:var(--violet); }
+  .add { padding:0 18px; color:#fff; background:var(--violet); border:0; border-radius:10px; font-weight:600; }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="E1">
+  <div class="nav"><a class="ghost" href="main.html">게시판</a><a class="ghost" href="chat.html">채팅</a><span class="ghost on">관리</span></div>
+</header>
+<div class="wrap">
+  <div class="tabs">
+    <button class="ghost on" data-tab="members">회원</button>
+    <button class="ghost" data-tab="categories">카테고리</button>
+    <button class="ghost" data-tab="reserved">금지어</button>
+  </div>
+  <div id="panel"><div class="empty">불러오는 중...</div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  const panel = $("panel");
+  let me = null;
+
+  function empty(text) { const d = document.createElement("div"); d.className = "empty"; d.textContent = text; panel.replaceChildren(d); }
+  function item(title, sub, tag, buttons) {
+    const row = document.createElement("div"); row.className = "item";
+    const info = document.createElement("div"); info.className = "info";
+    const t = document.createElement("div"); t.className = "t"; t.textContent = title;
+    if (tag) { const g = document.createElement("span"); g.className = "tag"; g.textContent = " " + tag; t.appendChild(g); }
+    info.appendChild(t);
+    if (sub) { const s = document.createElement("div"); s.className = "s"; s.textContent = sub; info.appendChild(s); }
+    const b = document.createElement("div"); b.className = "btns";
+    buttons.forEach(x => { const el = document.createElement("button"); el.className = "ghost" + (x.danger ? " danger" : ""); el.textContent = x.label; el.onclick = x.fn; b.appendChild(el); });
+    row.append(info, b); return row;
+  }
+  const NICK = /^[가-힣A-Za-z0-9_]{2,12}$/;
+
+  /* 회원 */
+  async function loadMembers() {
+    const { data, error } = await sb.rpc("admin_members");
+    if (error) return empty("불러오지 못했어요: " + error.message);
+    if (!data.length) return empty("회원이 없어요.");
+    panel.replaceChildren();
+    data.forEach(m => {
+      const btns = [{ label: "닉네임", fn: async () => {
+        const n = (prompt("새 닉네임 (2~12자)", m.nickname) || "").trim();
+        if (!n || n === m.nickname) return;
+        if (!NICK.test(n)) return alert("한글·영문·숫자·_ 로 2~12자만 쓸 수 있어요.");
+        const { error } = await sb.from("profiles").update({ nickname: n }).eq("id", m.id);
+        if (error) return alert(error.code === "23505" ? "이미 사용 중인 닉네임이에요." : error.message);
+        loadMembers();
+      } }];
+      if (m.id !== me.id) btns.push({ label: m.banned ? "차단 해제" : "차단", danger: !m.banned, fn: async () => {
+        if (!m.banned && !confirm(m.nickname + " 님을 차단할까요? 글·채팅을 쓸 수 없게 돼요.")) return;
+        const r = m.banned ? await sb.from("banned_users").delete().eq("user_id", m.id) : await sb.from("banned_users").insert({ user_id: m.id });
+        if (r.error) return alert(r.error.message);
+        loadMembers();
+      } });
+      panel.appendChild(item(m.nickname, m.email, m.banned ? "차단됨" : "", btns));
+    });
+  }
+
+  /* 카테고리 */
+  async function loadCategories() {
+    const { data, error } = await sb.from("categories").select("id,name").order("name");
+    if (error) return empty("불러오지 못했어요: " + error.message);
+    if (!data.length) return empty("카테고리가 없어요. 글을 쓰면서 만들어져요.");
+    panel.replaceChildren();
+    data.forEach(c => panel.appendChild(item(c.name, "", "", [
+      { label: "이름 변경", fn: async () => {
+        const n = (prompt("새 이름 (1~20자)", c.name) || "").trim();
+        if (!n || n === c.name) return;
+        if (n.length > 20) return alert("20자까지만 쓸 수 있어요.");
+        const { error } = await sb.from("categories").update({ name: n }).eq("id", c.id);
+        if (error) return alert(error.code === "23505" ? "이미 있는 카테고리예요." : error.message);
+        loadCategories();
+      } },
+      { label: "삭제", danger: true, fn: async () => {
+        if (!confirm("'" + c.name + "' 카테고리를 삭제할까요? 이 카테고리의 글은 분류 없음이 돼요.")) return;
+        const { error } = await sb.from("categories").delete().eq("id", c.id);
+        if (error) return alert(error.message);
+        loadCategories();
+      } }
+    ])));
+  }
+
+  /* 금지어 */
+  async function loadReserved() {
+    const { data, error } = await sb.from("reserved_nicknames").select("word").order("word");
+    if (error) return empty("불러오지 못했어요: " + error.message);
+    panel.replaceChildren();
+    const hint = document.createElement("p"); hint.className = "hint";
+    hint.textContent = "이 단어가 들어간 닉네임은 회원이 쓸 수 없어요. 대소문자와 _ 는 구분하지 않아요. 짧은 단어는 정상 닉네임도 막을 수 있어요.";
+    const f = document.createElement("form");
+    const i = document.createElement("input"); i.placeholder = "금지어 추가"; i.maxLength = 20;
+    const a = document.createElement("button"); a.className = "add"; a.textContent = "추가";
+    f.append(i, a);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const w = i.value.trim().toLowerCase(); if (!w) return;
+      const { error } = await sb.from("reserved_nicknames").insert({ word: w });
+      if (error) return alert(error.code === "23505" ? "이미 있는 단어예요." : error.message);
+      loadReserved();
+    };
+    panel.append(hint, f);
+    data.forEach(r => panel.appendChild(item(r.word, "", "", [{ label: "삭제", danger: true, fn: async () => {
+      const { error } = await sb.from("reserved_nicknames").delete().eq("word", r.word);
+      if (error) return alert(error.message);
+      loadReserved();
+    } }])));
+  }
+
+  const tabs = { members: loadMembers, categories: loadCategories, reserved: loadReserved };
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+    empty("불러오는 중..."); tabs[b.dataset.tab]();
+  });
+
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return location.replace("index.html");
+    me = data.session.user;
+    const a = await sb.from("admins").select("user_id").eq("user_id", me.id).maybeSingle();
+    if (!a.data) return location.replace("main.html");      // 관리자가 아니면 게시판으로
+    loadMembers();
+  })();
+</script>
+</body>
+</html>

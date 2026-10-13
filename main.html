@@ -77,7 +77,7 @@
 <section id="board-view" class="hidden">
   <header>
     <img src="logo.png" alt="E1">
-    <div class="who"><span><b id="me"></b> 님</span><a class="ghost" href="chat.html" style="text-decoration:none">채팅</a><button class="ghost" id="logout">로그아웃</button></div>
+    <div class="who"><span><b id="me"></b> 님</span><a class="ghost" href="chat.html" style="text-decoration:none">채팅</a><a class="ghost hidden" id="admin-link" href="admin.html" style="text-decoration:none">관리</a><button class="ghost" id="logout">로그아웃</button></div>
   </header>
 
   <div class="wrap">
@@ -120,7 +120,7 @@
 <script>
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
-  let user = null, nickname = "", categories = [], currentCat = null, currentPost = null;
+  let user = null, isAdmin = false, nickname = "", categories = [], currentCat = null, currentPost = null;
 
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
   const show = (name) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== name));
@@ -130,6 +130,8 @@
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace("index.html"); return; }
     user = data.session.user;
+    const a = await sb.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
+    isAdmin = !!a.data;
     const { data: p } = await sb.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
     if (p) enterBoard(p.nickname); else $("nick-view").classList.remove("hidden");
   }
@@ -138,6 +140,7 @@
     $("nick-view").classList.add("hidden");
     $("board-view").classList.remove("hidden");
     $("me").textContent = n;
+    $("admin-link").classList.toggle("hidden", !isAdmin);
     await loadCategories();
     await loadPosts();
   }
@@ -202,7 +205,7 @@
     $("d-title").textContent = data.title;
     $("d-meta").textContent = (data.categories ? data.categories.name + " · " : "") + (data.profiles ? data.profiles.nickname : "탈퇴한 회원") + " · " + fmt(data.created_at);
     $("d-body").textContent = data.content;
-    $("d-del").classList.toggle("hidden", data.author_id !== user.id);
+    $("d-del").classList.toggle("hidden", data.author_id !== user.id && !isAdmin);
     show("detail"); window.scrollTo(0, 0);
   }
   $("back").onclick = () => loadPosts();
@@ -244,7 +247,7 @@
       currentCat = null; $("list-title").textContent = "전체";
       await loadCategories(); await loadPosts();
     } catch (err) {
-      msg.textContent = "등록하지 못했어요: " + (err.message || err.code);
+      msg.textContent = (err.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : "등록하지 못했어요: " + (err.message || err.code);
     }
     btn.disabled = false;
   });
