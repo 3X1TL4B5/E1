@@ -55,14 +55,10 @@
     if (b) setTheme(currentTheme() === "dark" ? "light" : "dark");
   });
 
-  /* ---------- 사이트 이름·로고 ---------- */
-  const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "GAME HUB";
-  const LOGO = typeof SITE_LOGO === "string" ? SITE_LOGO : "logo.svg";
+  /* ---------- 사이트 이름 ---------- */
+  const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
   function brand() {
     document.querySelectorAll("[data-site-name]").forEach((e) => { e.textContent = NAME; });
-    document.querySelectorAll("img[data-logo]").forEach((e) => { e.src = LOGO; e.alt = NAME; });
-    const icon = document.querySelector('link[rel="icon"]');
-    if (icon) icon.href = LOGO;
     document.title = document.title ? NAME + " · " + document.title : NAME;
   }
 

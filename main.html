@@ -6,7 +6,6 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#EEF0F6">
 <title>홈</title>
-<link rel="icon" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap">
@@ -242,7 +241,6 @@
 <!-- 닉네임 정하기 (처음 한 번) -->
 <section id="nick-view" class="nick-wrap hidden">
   <div class="nick-card">
-    <img data-logo src="logo.svg" alt="">
     <h1>닉네임을 정해 주세요</h1>
     <p class="sub">게시판에는 이메일 대신 닉네임만 보여요.<br>한글·영문·숫자·_ 로 2~12자</p>
     <form id="nick-form">
@@ -257,7 +255,7 @@
 <div id="home-view" class="hidden">
   <header class="top">
     <div class="top-in">
-      <a class="brand" href="main.html" aria-label="홈"><img data-logo src="logo.svg" alt=""><span data-site-name>GAME HUB</span></a>
+      <a class="brand" href="main.html" aria-label="홈"><span data-site-name>GAME HUB</span></a>
       <nav class="links" aria-label="주요 메뉴">
         <a href="notice.html">공지</a><a href="board.html?b=free">자유</a><a href="board.html?b=tips">공략</a><a href="board.html?b=qna">질문</a><a href="chat.html">채팅</a>
       </nav>
@@ -345,7 +343,7 @@
   <div class="layer" id="menu-layer" role="dialog" aria-modal="true" aria-label="메뉴">
     <div class="scrim" data-close></div>
     <div class="sheet menu-sheet">
-      <div class="menu-top"><span class="brand"><img data-logo src="logo.svg" alt=""><span data-site-name>GAME HUB</span></span><button class="icon-btn" type="button" data-close aria-label="메뉴 닫기" data-icon="close"></button></div>
+      <div class="menu-top"><span class="brand"><span data-site-name>GAME HUB</span></span><button class="icon-btn" type="button" data-close aria-label="메뉴 닫기" data-icon="close"></button></div>
       <div class="menu-body">
         <div class="menu-lbl">게시판</div>
         <div id="menu-boards"></div>

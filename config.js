@@ -5,5 +5,4 @@
 const SUPABASE_URL = "https://shwvlpchvsrsheycfmzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNod3ZscGNodnNyc2hleWNmbXpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MjAxMzMsImV4cCI6MjEwNzM5NjEzM30.IP-LZ5Arcy8jM4iORjwVg9yDSbJWlDvLigOeFG5Ap_k";
 
-const SITE_NAME = "E1";         // 로고 옆과 탭 제목에 쓰이는 이름
-const SITE_LOGO = "logo.png";   // E1 저장소에 있는 기존 로고를 그대로 써요 (새 로고는 logo.svg)
+const SITE_NAME = "E1";         // 상단바 글자 로고와 탭 제목에 쓰이는 이름

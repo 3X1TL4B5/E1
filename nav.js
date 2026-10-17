@@ -7,6 +7,7 @@
     { key: "qna",    name: "질문/답변", desc: "궁금한 건 여기서 물어보세요", href: "board.html?b=qna" },
   ];
   const boardName = (k) => (BOARDS.find(b => b.key === k) || {}).name || "";
+  const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
 
   const ICON_S = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
   const ICON_M = '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
@@ -14,7 +15,8 @@
 
   const CSS = `
   #e1-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#000;border-bottom:1px solid #1c1830;position:sticky;top:env(safe-area-inset-top,0px);z-index:50;flex:none}
-  #e1-header .logo img{width:34px;height:34px;display:block}
+  .e1-wordmark{display:flex;align-items:center;height:42px;padding:0 4px;color:#e9e6f5;text-decoration:none;font:800 22px/1 "Outfit",-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;letter-spacing:-.01em}
+  a.e1-wordmark:hover{color:#a78bfa}
   #e1-header .tools{display:flex;gap:2px}
   .e1-ic{width:42px;height:42px;display:grid;place-items:center;background:none;border:0;color:#e9e6f5;cursor:pointer;border-radius:10px}
   .e1-ic:hover{background:#15111f}
@@ -22,7 +24,6 @@
   .e1-layer{position:fixed;inset:0;z-index:100;background:#000;overflow-y:auto;display:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:#e9e6f5}
   .e1-layer.open{display:block}
   .e1-top{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;max-width:720px;margin:0 auto}
-  .e1-top img{width:34px;height:34px}
   .e1-menu{max-width:720px;margin:0 auto;padding:4px 24px 48px}
   .e1-label{font-size:12px;letter-spacing:.14em;color:#8a85a3;margin:30px 0 6px}
   .e1-link{display:flex;align-items:baseline;gap:14px;width:100%;padding:15px 0;border:0;border-bottom:1px solid #1c1830;background:none;color:#e9e6f5;text-decoration:none;font:700 26px/1.3 inherit;font-family:inherit;text-align:left;cursor:pointer}
@@ -44,9 +45,9 @@
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function layerTop(onClose) {
     const top = el("div", "e1-top");
-    const img = el("img"); img.src = "logo.png"; img.alt = "E1";
+    const home = el("a", "e1-wordmark", NAME); home.href = "main.html"; home.setAttribute("aria-label", "홈");
     const x = el("button", "e1-ic"); x.setAttribute("aria-label", "닫기"); x.innerHTML = ICON_X; x.onclick = onClose;
-    top.append(img, x); return top;
+    top.append(home, x); return top;
   }
 
   window.E1Nav = {
@@ -58,8 +59,7 @@
 
       /* 상단바 */
       const header = el("div"); header.id = "e1-header";
-      const logo = el("a", "logo"); logo.href = "main.html"; logo.setAttribute("aria-label", "홈");
-      const li = el("img"); li.src = "logo.png"; li.alt = "E1"; logo.appendChild(li);
+      const logo = el("a", "e1-wordmark", NAME); logo.href = "main.html"; logo.setAttribute("aria-label", "홈");
       const tools = el("div", "tools");
       const bs = el("button", "e1-ic"); bs.setAttribute("aria-label", "검색창 열기"); bs.innerHTML = ICON_S;
       const bm = el("button", "e1-ic"); bm.setAttribute("aria-label", "메인 메뉴 열기"); bm.innerHTML = ICON_M;
