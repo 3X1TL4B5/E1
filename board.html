@@ -18,13 +18,13 @@
 <main class="page">
   <div id="list-view" class="stack">
     <div class="page-head">
-      <div><p id="b-no"></p><h1 id="b-name"></h1><p class="hint" id="b-desc" style="margin-top:4px"></p></div>
+      <div><h1 id="b-name"></h1><p class="hint" id="b-desc" style="margin-top:4px"></p></div>
     </div>
     <section class="tile"><div class="list" id="posts"><div class="skel"></div></div></section>
   </div>
 
   <div id="write-view" class="stack hidden">
-    <div class="page-head"><div><p id="w-no"></p><h1 id="w-name"></h1></div></div>
+    <div class="page-head"><div><h1 id="w-name"></h1></div></div>
     <section class="tile">
       <form id="write-form">
         <input id="w-title" placeholder="제목" maxlength="100" required>
@@ -134,8 +134,6 @@
     const a = await sb.from("admins").select("user_id");
     adminIds = new Set((a.data || []).map(r => r.user_id)); isAdmin = adminIds.has(user.id);
     E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: openWrite } });
-    const no = String(E1Nav.boards.indexOf(info) + 1).padStart(2, "0");
-    $("b-no").textContent = $("w-no").textContent = "게시판 " + no;
     $("b-name").textContent = info.name; $("w-name").textContent = info.name + " 글쓰기";
     $("b-desc").textContent = info.desc; document.title = (typeof SITE_NAME === "string" ? SITE_NAME : "E1") + " · " + info.name;
     const id = params.get("id");
