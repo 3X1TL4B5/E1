@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>E1</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root { --bg:#000; --violet:#7c5cff; --violet-soft:#a78bfa; --text:#e9e6f5; --muted:#8a85a3; --line:#1c1830; --panel:#0b0912; --danger:#ff6b81; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; min-height:100%; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); }
+  .hidden { display:none !important; }
+  button { font-family:inherit; cursor:pointer; }
+  .wrap { max-width:720px; margin:0 auto; padding:28px 20px 56px; }
+  .ghost { background:none; border:1px solid #2a2540; color:var(--muted); padding:8px 14px; border-radius:8px; font-size:13px; }
+  .ghost:hover { color:var(--text); border-color:var(--violet); }
+  .ghost.danger { color:var(--danger); border-color:#4a2530; }
+  .primary { padding:14px; font-size:16px; font-weight:600; color:#fff; background:var(--violet); border:0; border-radius:10px; }
+  .primary:disabled { opacity:.6; }
+  .head { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:18px; }
+  .eyebrow { font-size:12px; letter-spacing:.14em; color:var(--muted); }
+  h2.bn { font-size:28px; margin:6px 0 4px; letter-spacing:-.02em; }
+  .desc { margin:0; font-size:14px; color:var(--muted); }
+  .post { display:block; width:100%; text-align:left; padding:15px 2px; background:none; border:0; border-bottom:1px solid var(--line); color:var(--text); }
+  .post:hover { background:#0a0814; }
+  .post .t { font-size:16px; font-weight:600; margin-bottom:6px; overflow-wrap:anywhere; }
+  .post .m { font-size:13px; color:var(--muted); }
+  .empty { text-align:center; color:var(--muted); padding:56px 0; }
+  .adm { color:#ff5a6e; font-weight:700; }
+  .badge { margin-left:5px; padding:1px 6px; font-size:10px; font-weight:700; color:#fff; background:#d6334a; border-radius:6px; vertical-align:1px; }
+  form { display:grid; gap:12px; }
+  input, textarea { width:100%; padding:14px 16px; font-size:16px; font-family:inherit; color:var(--text); background:var(--panel); border:1px solid #2a2540; border-radius:10px; outline:none; }
+  input:focus, textarea:focus { border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,92,255,.25); }
+  textarea { min-height:240px; resize:vertical; line-height:1.6; }
+  .msg { min-height:20px; margin:12px 0 0; font-size:14px; color:var(--danger); }
+  .detail h2 { font-size:22px; margin:16px 0 8px; overflow-wrap:anywhere; }
+  .detail .m { font-size:13px; color:var(--muted); margin-bottom:22px; }
+  .detail .body { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.75; font-size:16px; }
+  .row { display:flex; gap:8px; margin-top:24px; } .row > * { flex:1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="list-view">
+    <div class="head">
+      <div><div class="eyebrow" id="b-no"></div><h2 class="bn" id="b-name"></h2><p class="desc" id="b-desc"></p></div>
+      <button class="primary" id="go-write" style="padding:10px 18px;font-size:14px">글쓰기</button>
+    </div>
+    <div id="posts"></div>
+  </div>
+
+  <div id="write-view" class="hidden">
+    <div class="head"><div><div class="eyebrow" id="w-no"></div><h2 class="bn" id="w-name"></h2></div></div>
+    <form id="write-form">
+      <input id="w-title" placeholder="제목" maxlength="100" required>
+      <textarea id="w-content" placeholder="내용" maxlength="5000" required></textarea>
+      <div class="row">
+        <button class="ghost" type="button" id="w-cancel" style="padding:14px">취소</button>
+        <button class="primary" id="w-btn" type="submit">등록</button>
+      </div>
+    </form>
+    <p id="w-msg" class="msg" role="alert"></p>
+  </div>
+
+  <div id="detail-view" class="hidden detail">
+    <button class="ghost" id="back">← 목록</button>
+    <h2 id="d-title"></h2>
+    <div class="m" id="d-meta"></div>
+    <div class="body" id="d-body"></div>
+    <div class="row"><button class="ghost danger hidden" id="d-del" style="padding:12px">삭제</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="nav.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const key = params.get("b");
+  if (key === "notice") location.replace("notice.html");
+  const info = E1Nav.boards.find(b => b.key === key && b.key !== "notice");
+  if (!info) location.replace("main.html");
+  let user = null, isAdmin = false, adminIds = new Set(), currentPost = null;
+
+  const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
+  const show = (n) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== n));
+  function nameEl(nick, id) {
+    const w = document.createElement("span"), s = document.createElement("span");
+    s.textContent = nick; w.appendChild(s);
+    if (adminIds.has(id)) { s.className = "adm"; const b = document.createElement("span"); b.className = "badge"; b.textContent = "관리자"; w.appendChild(b); }
+    return w;
+  }
+
+  async function loadPosts() {
+    history.replaceState(null, "", "board.html?b=" + key);
+    show("list");
+    const box = $("posts"); box.replaceChildren();
+    const { data, error } = await sb.from("posts").select("id,title,created_at,author_id,profiles(nickname)").eq("board", key).order("created_at", { ascending: false }).limit(50);
+    const note = (t) => { const d = document.createElement("div"); d.className = "empty"; d.textContent = t; box.appendChild(d); };
+    if (error) return note("불러오지 못했어요: " + error.message);
+    if (!data.length) return note("아직 글이 없어요. 첫 글을 써 보세요.");
+    data.forEach(p => {
+      const b = document.createElement("button"); b.className = "post";
+      const t = document.createElement("div"); t.className = "t"; t.textContent = p.title;
+      const m = document.createElement("div"); m.className = "m";
+      m.append(nameEl(p.profiles ? p.profiles.nickname : "탈퇴한 회원", p.author_id), " · " + fmt(p.created_at));
+      b.append(t, m); b.onclick = () => openPost(p.id); box.appendChild(b);
+    });
+  }
+
+  async function openPost(id) {
+    const { data, error } = await sb.from("posts").select("id,title,content,created_at,author_id,board,profiles(nickname)").eq("id", id).single();
+    if (error || data.board !== key) { alert("글을 불러오지 못했어요."); return loadPosts(); }
+    currentPost = data;
+    history.replaceState(null, "", "board.html?b=" + key + "&id=" + id);
+    $("d-title").textContent = data.title;
+    $("d-meta").replaceChildren(nameEl(data.profiles ? data.profiles.nickname : "탈퇴한 회원", data.author_id), " · " + fmt(data.created_at));
+    $("d-body").textContent = data.content;
+    $("d-del").classList.toggle("hidden", data.author_id !== user.id && !isAdmin);
+    show("detail"); window.scrollTo(0, 0);
+  }
+
+  $("back").onclick = loadPosts;
+  $("d-del").onclick = async () => {
+    if (!confirm("이 글을 삭제할까요?")) return;
+    const { error } = await sb.from("posts").delete().eq("id", currentPost.id);
+    if (error) return alert("삭제하지 못했어요.");
+    loadPosts();
+  };
+  $("go-write").onclick = () => { $("w-msg").textContent = ""; show("write"); };
+  $("w-cancel").onclick = loadPosts;
+
+  $("write-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("w-msg"), btn = $("w-btn");
+    const title = $("w-title").value.trim(), content = $("w-content").value.trim();
+    msg.textContent = "";
+    if (!title || !content) { msg.textContent = "제목과 내용을 입력해 주세요."; return; }
+    btn.disabled = true;
+    const { error } = await sb.from("posts").insert({ title, content, board: key });
+    btn.disabled = false;
+    if (error) { msg.textContent = (error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : "등록하지 못했어요: " + (error.message || error.code); return; }
+    $("w-title").value = ""; $("w-content").value = "";
+    loadPosts();
+  });
+
+  (async () => {
+    if (!info) return;
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return location.replace("index.html");
+    user = data.session.user;
+    const p = await sb.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+    if (!p.data) return location.replace("main.html");
+    const a = await sb.from("admins").select("user_id");
+    adminIds = new Set((a.data || []).map(r => r.user_id)); isAdmin = adminIds.has(user.id);
+    E1Nav.init(sb, { active: key, isAdmin });
+    const no = String(E1Nav.boards.indexOf(info) + 1).padStart(2, "0");
+    $("b-no").textContent = $("w-no").textContent = no;
+    $("b-name").textContent = $("w-name").textContent = info.name;
+    $("b-desc").textContent = info.desc; document.title = "E1 · " + info.name;
+    const id = params.get("id");
+    if (id) openPost(id); else loadPosts();
+  })();
+</script>
+</body>
+</html>
