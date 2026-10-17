@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EEF0F6">
+<title>모니터링</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+<script src="config.js"></script>
+<script src="common.js"></script>
+<style>
+  /* 한 화면에 꽉 차게: 상단바 + 제목줄 + 3열(각 열은 안에서 스크롤) */
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .mon-page { flex: 1; min-height: 0; width: 100%; padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+  .mon-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .status { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2FBF71; box-shadow: 0 0 0 3px rgba(47, 191, 113, .25); }
+  .paused .live-dot { background: var(--muted); box-shadow: none; }
+  .err .live-dot { background: var(--danger); box-shadow: none; }
+
+  .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .col { min-height: 0; padding: 0; gap: 0; overflow: hidden; }
+  .col-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .col-hd h2 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .col-hd h2 .ic svg { width: 18px; height: 18px; }
+  .col-hd .n { font-size: 12px; color: var(--muted); }
+  .feed { flex: 1; min-height: 0; overflow-y: auto; }
+  .row { display: block; padding: 11px 16px; border-bottom: 1px solid var(--line); margin: 0; }
+  .row > * { flex: none; }
+  .row.new { animation: flash 2.4s ease-out; }
+  @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+  .row .top { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .row .top .who { color: var(--fg); font-weight: 700; }
+  .row .top time { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .row .t { margin-top: 3px; font-weight: 600; overflow-wrap: anywhere; }
+  .row .t a { text-decoration: none; }
+  .row .t a:hover { text-decoration: underline; }
+  .row .b { margin-top: 3px; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
+  .row .ctx { margin-top: 4px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .row .ctx a { color: var(--accent-ink); text-decoration: none; }
+  .row .acts { margin-top: 6px; display: flex; gap: 6px; }
+  .row .acts button, .row .acts a { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+  .feed .empty { padding: 32px 16px; }
+
+  /* 좁은 화면: 위쪽 탭으로 한 열씩 */
+  .mon-tabs { display: none; }
+  @media (max-width: 959px) {
+    .mon-tabs { display: flex; gap: 6px; }
+    .mon-tabs .ghost { flex: 1; gap: 6px; }
+    .mon-tabs .ghost .cnt { font-size: 11px; font-weight: 800; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #fff; }
+    .mon-tabs .ghost .cnt:empty { display: none; }
+    .cols { grid-template-columns: minmax(0, 1fr); }
+    .col:not(.on) { display: none; }
+    .col-hd { display: none; }
+    .mon-page .page-head h1 { font-size: 22px; }
+  }
+  @media (orientation: landscape) and (max-height: 540px) { .mon-page .page-head { display: none; } }
+</style>
+</head>
+<body>
+<main class="page mon-page">
+  <div class="mon-head">
+    <div class="page-head"><div><p>관리</p><h1>모니터링</h1></div></div>
+    <div class="status" id="status">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span id="status-text">연결 중...</span>
+      <button class="ghost" type="button" id="pause">일시정지</button>
+    </div>
+  </div>
+
+  <nav class="mon-tabs" role="tablist" aria-label="모니터링 구역">
+    <button class="ghost on" type="button" role="tab" data-col="posts">게시판 <span class="cnt" id="cnt-posts"></span></button>
+    <button class="ghost" type="button" role="tab" data-col="comments">댓글 <span class="cnt" id="cnt-comments"></span></button>
+    <button class="ghost" type="button" role="tab" data-col="messages">채팅 <span class="cnt" id="cnt-messages"></span></button>
+  </nav>
+
+  <div class="cols">
+    <section class="tile col on" id="col-posts" aria-label="게시판">
+      <div class="col-hd"><h2><span class="ic" data-icon="doc"></span>게시판</h2><span class="n" id="n-posts"></span></div>
+      <div class="feed" id="feed-posts"><div class="skel" style="margin:16px"></div></div>
+    </section>
+    <section class="tile col" id="col-comments" aria-label="댓글">
+      <div class="col-hd"><h2><span class="ic" data-icon="talk"></span>댓글</h2><span class="n" id="n-comments"></span></div>
+      <div class="feed" id="feed-comments"><div class="skel" style="margin:16px"></div></div>
+    </section>
+    <section class="tile col" id="col-messages" aria-label="채팅">
+      <div class="col-hd"><h2><span class="ic" data-icon="chat"></span>채팅</h2><span class="n" id="n-messages"></span></div>
+      <div class="feed" id="feed-messages"><div class="skel" style="margin:16px"></div></div>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="nav.js"></script>
+<script>
+  const sb = GH.sb();
+  const { h, ICON } = GH;
+  const $ = (id) => document.getElementById(id);
+  const LIMIT = 50;            // 열마다 최근 50개
+  const INTERVAL = 1000;       // 1초마다 갱신
+  let paused = false, busy = false, adminIds = new Set(), activeCol = "posts";
+  const names = new Map();     // 채팅 작성자 id → 닉네임
+  const seen = { posts: null, comments: null, messages: null };   // 처음 불러온 뒤 새로 들어온 것만 깜빡이게
+  const sig = { posts: "", comments: "", messages: "" };           // 바뀐 게 없으면 다시 그리지 않음
+  const unread = { posts: 0, comments: 0, messages: 0 };           // 모바일 탭의 새 항목 수
+
+  document.querySelectorAll("[data-icon]").forEach((e) => { e.innerHTML = ICON[e.dataset.icon]; });
+  const time = (s) => new Date(s).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const day = (s) => { const d = new Date(s), t = new Date(); return d.toDateString() === t.toDateString() ? time(s) : d.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) + " " + time(s); };
+  function who(nick, id) {
+    const w = h("span", { class: "who" }, nick || "탈퇴한 회원");
+    return adminIds.has(id) ? [w, h("span", { class: "badge" }, "관리자")] : [w];
+  }
+
+  /* ---------- 지우기 (관리자) ---------- */
+  async function remove(table, id, label) {
+    if (!confirm(label + "을(를) 삭제할까요?")) return;
+    const { data, error } = await sb.from(table).delete().eq("id", id).select("id");
+    if (error || !data || !data.length) return alert("삭제하지 못했어요.");
+    tick(true);
+  }
+
+  /* ---------- 그리기 ---------- */
+  function paint(key, rows, makeRow) {
+    const s = rows.map((r) => r.id + ":" + (r.updated_at || "")).join(",");
+    $("n-" + key).textContent = "최근 " + rows.length + "개";
+    if (s === sig[key]) return;
+    sig[key] = s;
+    const fresh = seen[key] ? rows.filter((r) => !seen[key].has(r.id)) : [];
+    if (fresh.length && (activeCol !== key || window.matchMedia("(min-width: 960px)").matches === false)) {
+      if (activeCol !== key) { unread[key] += fresh.length; $("cnt-" + key).textContent = unread[key] > 99 ? "99+" : unread[key]; }
+    }
+    seen[key] = new Set(rows.map((r) => r.id));
+    const feed = $("feed-" + key);
+    if (!rows.length) return feed.replaceChildren(h("div", { class: "empty" }, "아직 없어요."));
+    const freshIds = new Set(fresh.map((r) => r.id));
+    feed.replaceChildren(...rows.map((r) => { const el = makeRow(r); if (freshIds.has(r.id)) el.classList.add("new"); return el; }));
+  }
+
+  const postRow = (p) => h("article", { class: "row" },
+    h("div", { class: "top" }, h("span", { class: "chip" }, GH.boardName(String(p.board_id)) || "게시판"), ...who(p.profiles && p.profiles.nickname, p.author_id), h("time", null, day(p.created_at))),
+    h("div", { class: "t" }, h("a", { href: GH.boardHref(String(p.board_id), p.id), target: "_blank", rel: "noopener" }, p.title)),
+    h("div", { class: "b" }, p.content.length > 140 ? p.content.slice(0, 140) + "…" : p.content),
+    p.updated_at ? h("div", { class: "ctx" }, "수정됨 · " + day(p.updated_at)) : null,
+    h("div", { class: "acts" }, h("button", { class: "ghost danger", type: "button", onclick: () => remove("posts", p.id, "이 글") }, "삭제")));
+
+  const commentRow = (c) => h("article", { class: "row" },
+    h("div", { class: "top" }, ...who(c.profiles && c.profiles.nickname, c.author_id), h("time", null, day(c.created_at))),
+    h("div", { class: "b" }, c.content),
+    c.posts ? h("div", { class: "ctx" }, "글: ", h("a", { href: GH.boardHref(String(c.posts.board_id), c.post_id), target: "_blank", rel: "noopener" }, c.posts.title)) : null,
+    h("div", { class: "acts" }, h("button", { class: "ghost danger", type: "button", onclick: () => remove("comments", c.id, "이 댓글") }, "삭제")));
+
+  const messageRow = (m) => h("article", { class: "row" },
+    h("div", { class: "top" }, ...who(names.get(m.author_id) || "회원", m.author_id), h("time", null, day(m.created_at))),
+    h("div", { class: "b" }, m.content),
+    h("div", { class: "acts" }, h("button", { class: "ghost danger", type: "button", onclick: () => remove("messages", m.id, "이 메시지") }, "삭제")));
+
+  /* ---------- 1초마다 불러오기 ---------- */
+  async function fetchNames(ids) {
+    const need = [...new Set(ids)].filter((id) => id && !names.has(id));
+    if (!need.length) return;
+    const { data } = await sb.from("profiles").select("id,nickname").in("id", need);
+    (data || []).forEach((p) => names.set(p.id, p.nickname));
+  }
+  async function tick(force) {
+    if ((paused && !force) || busy || document.hidden) return;
+    busy = true;
+    try {
+      const [p, c, m] = await Promise.all([
+        sb.from("posts").select("id,title,content,board_id,created_at,updated_at,author_id,profiles(nickname)").order("created_at", { ascending: false }).limit(LIMIT),
+        sb.from("comments").select("id,content,created_at,author_id,post_id,profiles(nickname),posts(title,board_id)").order("created_at", { ascending: false }).limit(LIMIT),
+        sb.from("messages").select("id,author_id,content,created_at").order("id", { ascending: false }).limit(LIMIT),
+      ]);
+      const err = p.error || c.error || m.error;
+      if (!p.error) paint("posts", p.data, postRow);
+      if (!c.error) paint("comments", c.data, commentRow);
+      if (!m.error) { await fetchNames(m.data.map((r) => r.author_id)); paint("messages", m.data, messageRow); }
+      setStatus(err ? "err" : "ok", err ? "불러오지 못했어요: " + err.message : "1초마다 갱신 · " + time(new Date()));
+    } catch (e) {
+      setStatus("err", "연결이 끊겼어요. 다시 시도하는 중...");
+    } finally { busy = false; }
+  }
+  function setStatus(kind, text) {
+    $("status").classList.toggle("err", kind === "err");
+    $("status-text").textContent = paused ? "일시정지됨" : text;
+  }
+  $("pause").onclick = () => {
+    paused = !paused;
+    $("pause").textContent = paused ? "다시 시작" : "일시정지";
+    $("status").classList.toggle("paused", paused);
+    $("status-text").textContent = paused ? "일시정지됨" : "다시 시작하는 중...";
+    if (!paused) tick(true);
+  };
+
+  /* ---------- 모바일 탭 ---------- */
+  document.querySelectorAll(".mon-tabs [data-col]").forEach((b) => b.addEventListener("click", () => {
+    activeCol = b.dataset.col;
+    document.querySelectorAll(".mon-tabs [data-col]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+    document.querySelectorAll(".col").forEach((c) => c.classList.toggle("on", c.id === "col-" + activeCol));
+    unread[activeCol] = 0; $("cnt-" + activeCol).textContent = "";
+  }));
+
+  /* ---------- 시작: 관리자만 ---------- */
+  (async () => {
+    const s = await GH.session();
+    if (!s) return location.replace("index.html");
+    const a = await sb.from("admins").select("user_id");
+    adminIds = new Set((a.data || []).map((r) => r.user_id));
+    if (!adminIds.has(s.user.id)) return location.replace("main.html");     // 관리자가 아니면 홈으로
+    await GH.loadBoards();
+    E1Nav.init(sb, { active: "monitor", isAdmin: true, write: false, tabbar: false });
+    await tick(true);
+    setInterval(tick, INTERVAL);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(true); });
+  })();
+</script>
+</body>
+</html>

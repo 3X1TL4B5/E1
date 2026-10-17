@@ -3,7 +3,7 @@
    먼저 불러올 것: theme.css, app.css, config.js, common.js
 
    E1Nav.init(sb, {
-     active:  "home" | "notice" | 게시판 id(boards.id) | "chat" | "admin",  // 지금 페이지 표시
+     active:  "home" | "notice" | 게시판 id(boards.id) | "chat" | "admin" | "monitor",  // 지금 페이지 표시
      isAdmin: true/false,                 // 메뉴에 '관리' 보이기
      write:   { href, label } | { onClick, label } | false,   // 글쓰기 버튼 (기본: 첫 번째 게시판)
      tabbar:  true/false,                 // 휴대폰 하단 탭바 (기본 true, 채팅처럼 입력창이 아래에 있으면 false)
@@ -72,6 +72,7 @@
           h("a", { class: "menu-link" + (active === "chat" ? " on" : ""), href: "chat.html" }, ic("chat"), "전체 채팅"),
           h("div", { class: "menu-lbl" }, "설정"),
           opts.isAdmin ? h("a", { class: "menu-link" + (active === "admin" ? " on" : ""), href: "admin.html" }, ic("list"), "관리") : null,
+          opts.isAdmin ? h("a", { class: "menu-link" + (active === "monitor" ? " on" : ""), href: "monitor.html" }, ic("eye"), "모니터링") : null,
           h("button", { class: "menu-link", type: "button", "data-theme-toggle": "" }, h("i", { class: "ic" }), h("span", { "data-theme-label": "" }, "테마 바꾸기")),
           h("button", { class: "menu-link danger", type: "button", onclick: signOut }, "로그아웃"))));
 
