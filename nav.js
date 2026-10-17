@@ -68,7 +68,7 @@
           // 순서: 커뮤니티(홈 → 공지·게시판들 → 전체 채팅) → 설정(관리 → 테마 → 로그아웃)
           h("div", { class: "menu-lbl" }, "커뮤니티"),
           h("a", { class: "menu-link" + (active === "home" ? " on" : ""), href: "main.html" }, ic("home"), "홈"),
-          BOARDS.map((b, i) => h("a", { class: "menu-link" + (active === b.key ? " on" : ""), href: b.href }, h("small", null, String(i + 1).padStart(2, "0")), b.name)),
+          BOARDS.map((b) => h("a", { class: "menu-link" + (active === b.key ? " on" : ""), href: b.href }, ic(GH.boardIcon(b)), b.name)),
           h("a", { class: "menu-link" + (active === "chat" ? " on" : ""), href: "chat.html" }, ic("chat"), "전체 채팅"),
           h("div", { class: "menu-lbl" }, "설정"),
           opts.isAdmin ? h("a", { class: "menu-link" + (active === "admin" ? " on" : ""), href: "admin.html" }, ic("list"), "관리") : null,

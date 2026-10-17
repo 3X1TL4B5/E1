@@ -33,6 +33,12 @@
     chat: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',
     list: '<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
     eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    /* 게시판 아이콘 */
+    megaphone: '<svg viewBox="0 0 24 24"><path d="M3 10v4h3l6 4V6L6 10z"/><path d="M16 9a3.5 3.5 0 0 1 0 6"/><path d="M19 6a8 8 0 0 1 0 12"/></svg>',
+    talk: '<svg viewBox="0 0 24 24"><path d="M3 5h12v8H8l-5 4z"/><path d="M15 9h6v8l-3-2h-6v-2"/></svg>',
+    bulb: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>',
+    help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></svg>',
+    doc: '<svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>',
   };
 
   function syncTheme() {
@@ -153,6 +159,15 @@
     boardName: (k) => (BOARDS.find((b) => b.key === String(k)) || {}).name || "",
     boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?b=" + k + (id ? "&id=" + id : "")),
     firstBoardHref: () => (BOARDS[1] ? BOARDS[1].href : "main.html"),
+    /* 게시판 이름으로 아이콘 고르기 (관리에서 새 게시판을 만들면 이름에 맞춰 자동으로 골라요) */
+    boardIcon: (b) => {
+      const n = (b && b.name) || "";
+      if (b && b.key === "notice" || /공지/.test(n)) return "megaphone";
+      if (/자유|잡담|수다/.test(n)) return "talk";
+      if (/공략|팁|가이드/.test(n)) return "bulb";
+      if (/질문|답변|문의|Q&A/i.test(n)) return "help";
+      return "doc";
+    },
     theme: { current: currentTheme, set: setTheme, sync: syncTheme },
     sb() {
       if (DEMO) return null;
