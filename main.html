@@ -339,14 +339,18 @@
     const rest = list.length > 5 ? [h("span", { class: "rest" }, "+" + (list.length - 5))] : [];
     $("online-avs").replaceChildren(...shown.map(avatar), ...rest);
   }
-  function joinPresence() {
+  // 관리자는 '지금 접속'에 나오지 않아요: 관리자는 자기 접속을 알리지 않고(track 안 함),
+  // 혹시 들어온 관리자 기록도 목록에서 걸러요.
+  async function joinPresence() {
     if (DEMO) return drawOnline(D.online);
+    const a = await sb.from("admins").select("user_id");
+    const adminIds = new Set((a.data || []).map((r) => r.user_id));
     const ch = sb.channel("hub-online", { config: { presence: { key: user.id } } });
     ch.on("presence", { event: "sync" }, () => {
       const st = ch.presenceState();
-      drawOnline(Object.values(st).map((v) => (v[0] && v[0].nick) || "멤버"));
+      drawOnline(Object.entries(st).filter(([id]) => !adminIds.has(id)).map(([, v]) => (v[0] && v[0].nick) || "멤버"));
     });
-    ch.subscribe(async (status) => { if (status === "SUBSCRIBED") await ch.track({ nick: myNick }); });
+    ch.subscribe(async (status) => { if (status === "SUBSCRIBED" && !isAdmin) await ch.track({ nick: myNick }); });
   }
 
   async function loadMembers() {
