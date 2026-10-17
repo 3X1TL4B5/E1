@@ -13,6 +13,30 @@
 <link rel="stylesheet" href="app.css">
 <script src="config.js"></script>
 <script src="common.js"></script>
+<style>
+  /* 목록: 제목 옆 댓글 수 */
+  .list-item .t { display: flex; align-items: baseline; gap: 8px; }
+  .list-item .t .tt { min-width: 0; overflow-wrap: anywhere; }
+  .cc { flex: none; font-size: 12px; font-weight: 700; color: var(--accent-ink); }
+  .more-btn { align-self: center; }
+
+  /* 댓글 */
+  .c-head { display: flex; align-items: baseline; gap: 6px; }
+  .c-head h3 { margin: 0; font-size: 16px; }
+  .c-head span { color: var(--accent-ink); font-weight: 700; }
+  .c-list { display: flex; flex-direction: column; }
+  .c-item { padding: 12px 2px; border-top: 1px solid var(--line); }
+  .c-item:first-child { border-top: 0; }
+  .c-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .c-meta b { color: var(--fg); font-weight: 700; }
+  .c-meta button { margin-left: auto; background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 2px 4px; }
+  .c-meta button:hover { color: var(--danger); }
+  .c-body { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+  #c-form { display: flex; gap: 8px; align-items: flex-end; }
+  #c-form textarea { min-height: 48px; height: 48px; resize: vertical; flex: 1; min-width: 0; }
+  #c-form .primary { flex: none; height: 48px; }
+  .c-empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+</style>
 </head>
 <body>
 <main class="page">
@@ -21,6 +45,7 @@
       <div><h1 id="b-name"></h1><p class="hint" id="b-desc" style="margin-top:4px"></p></div>
     </div>
     <section class="tile"><div class="list" id="posts"><div class="skel"></div></div></section>
+    <button class="ghost more-btn hidden" id="more" type="button">이전 글 더 보기</button>
   </div>
 
   <div id="write-view" class="stack hidden">
@@ -44,7 +69,19 @@
       <h2 id="d-title"></h2>
       <div class="m" id="d-meta"></div>
       <div class="body" id="d-body"></div>
-      <div class="row"><button class="ghost danger hidden" id="d-del" type="button">삭제</button></div>
+      <div class="row">
+        <button class="ghost hidden" id="d-edit" type="button">수정</button>
+        <button class="ghost danger hidden" id="d-del" type="button">삭제</button>
+      </div>
+    </section>
+    <section class="tile" aria-label="댓글">
+      <div class="c-head"><h3>댓글</h3><span id="c-count">0</span></div>
+      <div class="c-list" id="c-list"></div>
+      <form id="c-form">
+        <textarea id="c-text" placeholder="댓글을 남겨 주세요" maxlength="1000" required></textarea>
+        <button class="primary" id="c-btn" type="submit">등록</button>
+      </form>
+      <p id="c-msg" class="msg" role="alert"></p>
     </section>
   </div>
 </main>
@@ -56,11 +93,15 @@
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const key = params.get("b") || "";          // boards.id
+  const PAGE = 30;                             // 한 번에 불러오는 글 수
   let info = null;                             // GH.loadBoards() 뒤에 정해져요
-  let user = null, isAdmin = false, adminIds = new Set(), currentPost = null;
+  let user = null, isAdmin = false, adminIds = new Set(), currentPost = null, editingId = null, page = 0;
 
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
+  const fmtTime = (s) => new Date(s).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
   const show = (n) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== n));
+  const nickOf = (row) => (row.profiles ? row.profiles.nickname : "탈퇴한 회원");
+  const rlsMsg = (error, fallback) => (error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : fallback + ": " + (error.message || error.code);
   function nameEl(nick, id) {
     const w = document.createElement("span"), s = document.createElement("span");
     s.textContent = nick; w.appendChild(s);
@@ -68,45 +109,114 @@
     return w;
   }
 
-  async function loadPosts() {
-    history.replaceState(null, "", "board.html?b=" + key);
-    show("list");
-    const box = $("posts"); box.replaceChildren();
-    const { data, error } = await sb.from("posts").select("id,title,created_at,author_id,profiles(nickname)").eq("board_id", info.id).order("created_at", { ascending: false }).limit(50);
+  /* ---------- 목록 (30개씩, '이전 글 더 보기') ---------- */
+  async function loadPosts(reset = true) {
+    const box = $("posts");
+    if (reset) {
+      history.replaceState(null, "", "board.html?b=" + key);
+      show("list"); page = 0; box.replaceChildren(); $("more").classList.add("hidden");
+    }
+    const from = page * PAGE;
+    const { data, error } = await sb.from("posts")
+      .select("id,title,created_at,author_id,profiles(nickname),comments(count)")
+      .eq("board_id", info.id).order("created_at", { ascending: false }).range(from, from + PAGE - 1);
     const note = (t) => { const d = document.createElement("div"); d.className = "empty"; d.textContent = t; box.appendChild(d); };
     if (error) return note("불러오지 못했어요: " + error.message);
-    if (!data.length) return note("아직 글이 없어요. 첫 글을 써 보세요.");
+    if (!data.length && page === 0) return note("아직 글이 없어요. 첫 글을 써 보세요.");
     data.forEach(p => {
       const b = document.createElement("button"); b.className = "list-item"; b.type = "button";
-      const t = document.createElement("div"); t.className = "t"; t.textContent = p.title;
+      const t = document.createElement("div"); t.className = "t";
+      const tt = document.createElement("span"); tt.className = "tt"; tt.textContent = p.title; t.appendChild(tt);
+      const n = p.comments && p.comments[0] ? p.comments[0].count : 0;
+      if (n) { const c = document.createElement("span"); c.className = "cc"; c.textContent = "[" + n + "]"; c.title = "댓글 " + n + "개"; t.appendChild(c); }
       const m = document.createElement("div"); m.className = "m";
-      m.append(nameEl(p.profiles ? p.profiles.nickname : "탈퇴한 회원", p.author_id), " · " + fmt(p.created_at));
+      m.append(nameEl(nickOf(p), p.author_id), " · " + fmt(p.created_at));
       b.append(t, m); b.onclick = () => openPost(p.id); box.appendChild(b);
     });
+    $("more").classList.toggle("hidden", data.length < PAGE);
   }
+  $("more").onclick = async () => { const b = $("more"); b.disabled = true; page++; await loadPosts(false); b.disabled = false; };
 
+  /* ---------- 글 보기 ---------- */
   async function openPost(id) {
-    const { data, error } = await sb.from("posts").select("id,title,content,created_at,author_id,board_id,profiles(nickname)").eq("id", id).single();
+    const { data, error } = await sb.from("posts").select("id,title,content,created_at,updated_at,author_id,board_id,profiles(nickname)").eq("id", id).single();
     if (error || String(data.board_id) !== key) { alert("글을 불러오지 못했어요."); return loadPosts(); }
     currentPost = data;
     history.replaceState(null, "", "board.html?b=" + key + "&id=" + id);
     $("d-title").textContent = data.title;
-    $("d-meta").replaceChildren(nameEl(data.profiles ? data.profiles.nickname : "탈퇴한 회원", data.author_id), " · " + fmt(data.created_at));
+    const meta = [nameEl(nickOf(data), data.author_id), " · " + fmt(data.created_at)];
+    if (data.updated_at) meta.push(" · 수정됨");
+    $("d-meta").replaceChildren(...meta);
     $("d-body").textContent = data.content;
-    $("d-del").classList.toggle("hidden", data.author_id !== user.id && !isAdmin);
+    const mine = data.author_id === user.id;
+    $("d-edit").classList.toggle("hidden", !mine);
+    $("d-del").classList.toggle("hidden", !mine && !isAdmin);
+    $("c-msg").textContent = ""; $("c-text").value = "";
     show("detail"); window.scrollTo(0, 0);
+    loadComments();
   }
 
-  function openWrite() { $("w-msg").textContent = ""; show("write"); window.scrollTo(0, 0); $("w-title").focus(); }
+  /* ---------- 댓글 ---------- */
+  async function loadComments() {
+    const box = $("c-list"), postId = currentPost.id;
+    const { data, error } = await sb.from("comments").select("id,content,created_at,author_id,profiles(nickname)").eq("post_id", postId).order("created_at");
+    if (!currentPost || currentPost.id !== postId) return;       // 그새 다른 글로 넘어갔으면 버려요
+    if (error) { box.replaceChildren(Object.assign(document.createElement("div"), { className: "c-empty", textContent: "댓글을 불러오지 못했어요." })); return; }
+    $("c-count").textContent = data.length;
+    if (!data.length) { box.replaceChildren(Object.assign(document.createElement("div"), { className: "c-empty", textContent: "첫 댓글을 남겨 보세요." })); return; }
+    box.replaceChildren(...data.map(c => {
+      const row = document.createElement("div"); row.className = "c-item";
+      const meta = document.createElement("div"); meta.className = "c-meta";
+      const who = document.createElement("b"); who.appendChild(nameEl(nickOf(c), c.author_id));
+      meta.append(who, fmtTime(c.created_at));
+      if (c.author_id === user.id || isAdmin) {
+        const del = document.createElement("button"); del.type = "button"; del.textContent = "삭제";
+        del.onclick = async () => {
+          if (!confirm("이 댓글을 삭제할까요?")) return;
+          const { error } = await sb.from("comments").delete().eq("id", c.id);
+          if (error) return alert("삭제하지 못했어요.");
+          loadComments();
+        };
+        meta.appendChild(del);
+      }
+      const body = document.createElement("div"); body.className = "c-body"; body.textContent = c.content;
+      row.append(meta, body); return row;
+    }));
+  }
+  $("c-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("c-msg"), btn = $("c-btn"), content = $("c-text").value.trim();
+    msg.textContent = "";
+    if (!content) return;
+    btn.disabled = true;
+    const { error } = await sb.from("comments").insert({ post_id: currentPost.id, content });
+    btn.disabled = false;
+    if (error) { msg.textContent = rlsMsg(error, "등록하지 못했어요"); return; }
+    $("c-text").value = "";
+    loadComments();
+  });
+  // Ctrl+Enter 로 댓글 등록
+  $("c-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("c-form").requestSubmit(); });
 
-  $("back").onclick = loadPosts;
+  /* ---------- 글쓰기 · 수정 ---------- */
+  function openWrite(post) {
+    editingId = post && post.id ? post.id : null;
+    $("w-name").textContent = editingId ? "글 수정" : info.name + " 글쓰기";
+    $("w-btn").textContent = editingId ? "수정" : "등록";
+    $("w-title").value = editingId ? post.title : "";
+    $("w-content").value = editingId ? post.content : "";
+    $("w-msg").textContent = ""; show("write"); window.scrollTo(0, 0); $("w-title").focus();
+  }
+
+  $("back").onclick = () => loadPosts();
+  $("d-edit").onclick = () => openWrite(currentPost);
   $("d-del").onclick = async () => {
     if (!confirm("이 글을 삭제할까요?")) return;
     const { error } = await sb.from("posts").delete().eq("id", currentPost.id);
     if (error) return alert("삭제하지 못했어요.");
     loadPosts();
   };
-  $("w-cancel").onclick = loadPosts;
+  $("w-cancel").onclick = () => (editingId ? openPost(editingId) : loadPosts());
 
   $("write-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -115,13 +225,20 @@
     msg.textContent = "";
     if (!title || !content) { msg.textContent = "제목과 내용을 입력해 주세요."; return; }
     btn.disabled = true;
-    const { error } = await sb.from("posts").insert({ title, content, board_id: info.id });
+    let error;
+    if (editingId) {
+      const r = await sb.from("posts").update({ title, content, updated_at: new Date().toISOString() }).eq("id", editingId).select("id");
+      error = r.error || (!r.data || !r.data.length ? { message: "row-level security" } : null);   // 0건 = 내 글이 아님
+    } else {
+      ({ error } = await sb.from("posts").insert({ title, content, board_id: info.id }));
+    }
     btn.disabled = false;
-    if (error) { msg.textContent = (error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : "등록하지 못했어요: " + (error.message || error.code); return; }
+    if (error) { msg.textContent = rlsMsg(error, editingId ? "수정하지 못했어요" : "등록하지 못했어요"); return; }
     $("w-title").value = ""; $("w-content").value = "";
-    loadPosts();
+    if (editingId) { const id = editingId; editingId = null; openPost(id); } else loadPosts();
   });
 
+  /* ---------- 시작 ---------- */
   (async () => {
     const { data } = await sb.auth.getSession();
     if (!data.session) return location.replace("index.html");
@@ -133,8 +250,8 @@
     if (!info) return location.replace("main.html");      // 없는 게시판이면 홈으로
     const a = await sb.from("admins").select("user_id");
     adminIds = new Set((a.data || []).map(r => r.user_id)); isAdmin = adminIds.has(user.id);
-    E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: openWrite } });
-    $("b-name").textContent = info.name; $("w-name").textContent = info.name + " 글쓰기";
+    E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: () => openWrite(null) } });
+    $("b-name").textContent = info.name;
     $("b-desc").textContent = info.desc; document.title = (typeof SITE_NAME === "string" ? SITE_NAME : "E1") + " · " + info.name;
     const id = params.get("id");
     if (id) openPost(id); else loadPosts();
