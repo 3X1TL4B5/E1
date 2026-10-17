@@ -65,13 +65,13 @@
       h("div", { class: "sheet menu-sheet" },
         h("div", { class: "menu-top" }, h("a", { class: "brand", href: "main.html" }, NAME), menuClose),
         h("div", { class: "menu-body" },
-          h("div", { class: "menu-lbl" }, "게시판"),
-          BOARDS.map((b, i) => h("a", { class: "menu-link" + (active === b.key ? " on" : ""), href: b.href }, h("small", null, String(i + 1).padStart(2, "0")), b.name)),
+          // 순서: 커뮤니티(홈 → 공지·게시판들 → 전체 채팅) → 설정(관리 → 테마 → 로그아웃)
           h("div", { class: "menu-lbl" }, "커뮤니티"),
           h("a", { class: "menu-link" + (active === "home" ? " on" : ""), href: "main.html" }, ic("home"), "홈"),
+          BOARDS.map((b, i) => h("a", { class: "menu-link" + (active === b.key ? " on" : ""), href: b.href }, h("small", null, String(i + 1).padStart(2, "0")), b.name)),
           h("a", { class: "menu-link" + (active === "chat" ? " on" : ""), href: "chat.html" }, ic("chat"), "전체 채팅"),
-          opts.isAdmin ? h("a", { class: "menu-link" + (active === "admin" ? " on" : ""), href: "admin.html" }, ic("list"), "관리") : null,
           h("div", { class: "menu-lbl" }, "설정"),
+          opts.isAdmin ? h("a", { class: "menu-link" + (active === "admin" ? " on" : ""), href: "admin.html" }, ic("list"), "관리") : null,
           h("button", { class: "menu-link", type: "button", "data-theme-toggle": "" }, h("i", { class: "ic" }), h("span", { "data-theme-label": "" }, "테마 바꾸기")),
           h("button", { class: "menu-link danger", type: "button", onclick: signOut }, "로그아웃"))));
 
