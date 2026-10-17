@@ -126,7 +126,8 @@
   let picks = [];                              // 글쓰기 이미지: { path } 이미 올린 것 | { blob, url } 새로 고른 것
   const lockedMine = (row) => row.author_id === user.id && !isAdmin && isLocked(row.created_at);
   const imgOn = () => info && info.imageRule !== "off";
-  const imgRequired = () => info && info.imageRule === "required";
+  const imgRequired = () => info && info.imageRule === "required" && !isAdmin;   // 관리자는 모든 제한에서 예외
+  const maxCount = () => (isAdmin ? Infinity : IMG.MAX_COUNT);
 
   document.querySelectorAll("[data-icon]").forEach((e) => { e.innerHTML = GH.ICON[e.dataset.icon]; });
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
@@ -256,8 +257,8 @@
 
   /* ---------- 글쓰기 이미지 고르기 ---------- */
   function imgHint() {
-    const base = (imgRequired() ? "이미지를 1장 이상 올려야 등록돼요. " : "") + "최대 " + IMG.MAX_COUNT + "장, 1장 " + mb(IMG.MAX_BYTES) + "까지 (큰 사진은 자동으로 줄여요)";
-    $("w-img-hint").textContent = base + " · " + picks.length + "/" + IMG.MAX_COUNT;
+    const base = (imgRequired() ? "이미지를 1장 이상 올려야 등록돼요. " : "") + (isAdmin ? "관리자는 장 수 제한 없음" : "최대 " + IMG.MAX_COUNT + "장") + ", 1장 " + mb(IMG.MAX_BYTES) + "까지 (큰 사진은 자동으로 줄여요)";
+    $("w-img-hint").textContent = base + " · " + picks.length + (isAdmin ? "장" : "/" + IMG.MAX_COUNT);
   }
   function drawPicks() {
     $("w-thumbs").replaceChildren(...picks.map((p, i) => {
@@ -274,7 +275,7 @@
     const files = [...e.target.files]; e.target.value = "";
     const msg = $("w-msg"); msg.textContent = "";
     for (const f of files) {
-      if (picks.length >= IMG.MAX_COUNT) { msg.textContent = "이미지는 최대 " + IMG.MAX_COUNT + "장까지 올릴 수 있어요."; break; }
+      if (picks.length >= maxCount()) { msg.textContent = "이미지는 최대 " + IMG.MAX_COUNT + "장까지 올릴 수 있어요."; break; }
       if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { msg.textContent = "jpg, png, webp, gif 이미지만 올릴 수 있어요."; continue; }
       const blob = await GH.shrinkImage(f);
       if (blob.size > IMG.MAX_BYTES) { msg.textContent = "‘" + f.name + "’은(는) 줄여도 " + mb(blob.size) + "라서 올릴 수 없어요. (최대 " + mb(IMG.MAX_BYTES) + ")"; continue; }
