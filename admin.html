@@ -33,7 +33,13 @@
 </head>
 <body>
 <main class="page">
-  <div class="page-head"><div><p>운영</p><h1>관리</h1></div></div>
+  <div class="page-head">
+    <div><p>운영</p><h1>관리</h1></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <button class="ghost" type="button" id="backup-btn">백업 받기</button>
+      <span class="hint" id="backup-msg"></span>
+    </div>
+  </div>
   <div class="tabs">
     <button class="ghost on" data-tab="members" type="button">회원</button>
     <button class="ghost" data-tab="invites" type="button">초대</button>
@@ -230,6 +236,53 @@
       loadReserved();
     } }])));
   }
+
+  /* 백업 받기: 관리자 권한으로 읽을 수 있는 모든 데이터를 JSON 파일 하나로 저장
+     (데이터베이스 비밀번호 없이 가능. 비밀번호 해시·이미지 파일 자체는 포함되지 않아요) */
+  const BACKUP_TABLES = [
+    ["boards", "*"],
+    ["notices", "id,title,content,pinned,created_at,updated_at"],
+    ["posts", "*"],
+    ["comments", "*"],
+    ["messages", "*"],
+    ["profiles", "*"],
+    ["banned_users", "*"],
+    ["content_locks", "*"],
+    ["invite_links", "*"],
+    ["invite_uses", "*"],
+    ["reserved_nicknames", "*"],
+  ];
+  async function fetchAll(table, cols) {
+    const rows = [], STEP = 1000;
+    for (let from = 0; ; from += STEP) {
+      const { data, error } = await sb.from(table).select(cols).range(from, from + STEP - 1);
+      if (error) throw new Error(table + ": " + error.message);
+      rows.push(...data);
+      if (data.length < STEP) return rows;
+    }
+  }
+  $("backup-btn").onclick = async () => {
+    const btn = $("backup-btn"), msg = $("backup-msg");
+    btn.disabled = true; msg.textContent = "";
+    const out = { site: "E1", made_at: new Date().toISOString(), made_by: me.email, tables: {}, errors: [] };
+    try {
+      for (const [t, cols] of BACKUP_TABLES) {
+        btn.textContent = "받는 중: " + t;
+        try { out.tables[t] = await fetchAll(t, cols); } catch (e) { out.errors.push(e.message); }
+      }
+      btn.textContent = "받는 중: 회원 이메일";
+      const m = await sb.rpc("admin_members");
+      if (m.error) out.errors.push("admin_members: " + m.error.message); else out.tables.members_with_email = m.data;
+      const counts = Object.entries(out.tables).map(([k, v]) => k + " " + v.length).join(", ");
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "E1-backup-" + new Date().toLocaleDateString("sv-SE") + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      msg.textContent = (out.errors.length ? "일부 실패(" + out.errors.length + ") · " : "완료 · ") + (blob.size / 1024).toFixed(0) + "KB · " + counts;
+    } finally { btn.disabled = false; btn.textContent = "백업 받기"; }
+  };
 
   const tabs = { members: loadMembers, boards: loadBoardsAdmin, invites: loadInvites, reserved: loadReserved };
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
