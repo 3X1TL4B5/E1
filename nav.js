@@ -1,133 +1,148 @@
-/* E1 공통 상단바: 로고 · 검색 · 메뉴 버튼 (모든 페이지에서 불러다 써요) */
+/* E1 공통 상단바 · 검색 · 메뉴 · 휴대폰 탭바
+   로그인 후 모든 페이지가 이 파일 하나로 main.html과 같은 상단바를 써요. (규칙: CLAUDE.md)
+   먼저 불러올 것: theme.css, app.css, config.js, common.js
+
+   E1Nav.init(sb, {
+     active:  "home" | "notice" | "free" | "tips" | "qna" | "chat" | "admin",  // 지금 페이지 표시
+     isAdmin: true/false,                 // 메뉴에 '관리' 보이기
+     write:   { href, label } | { onClick, label } | false,   // 글쓰기 버튼 (기본: 자유게시판)
+     tabbar:  true/false,                 // 휴대폰 하단 탭바 (기본 true, 채팅처럼 입력창이 아래에 있으면 false)
+   }) */
 (function () {
-  const BOARDS = [
-    { key: "notice", name: "공지사항", desc: "운영 소식과 안내", href: "notice.html" },
-    { key: "free",   name: "자유게시판", desc: "자유롭게 이야기해요", href: "board.html?b=free" },
-    { key: "tips",   name: "공략/팁", desc: "노하우를 나눠요", href: "board.html?b=tips" },
-    { key: "qna",    name: "질문/답변", desc: "궁금한 건 여기서 물어보세요", href: "board.html?b=qna" },
-  ];
-  const boardName = (k) => (BOARDS.find(b => b.key === k) || {}).name || "";
+  const { h, ICON, BOARDS, boardName, boardHref, ago, DEMO } = GH;
   const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
+  const ic = (name) => h("span", { class: "ic", html: ICON[name] });
 
-  const ICON_S = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
-  const ICON_M = '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
-  const ICON_X = '<svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg>';
+  const LINKS = [
+    { key: "notice", label: "공지", href: "notice.html" },
+    { key: "free", label: "자유", href: "board.html?b=free" },
+    { key: "tips", label: "공략", href: "board.html?b=tips" },
+    { key: "qna", label: "질문", href: "board.html?b=qna" },
+    { key: "chat", label: "채팅", href: "chat.html" },
+  ];
 
-  const CSS = `
-  #e1-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#000;border-bottom:1px solid #1c1830;position:sticky;top:env(safe-area-inset-top,0px);z-index:50;flex:none}
-  .e1-wordmark{display:flex;align-items:center;height:42px;padding:0 4px;color:#e9e6f5;text-decoration:none;font:800 22px/1 "Outfit",-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;letter-spacing:-.01em}
-  a.e1-wordmark:hover{color:#a78bfa}
-  #e1-header .tools{display:flex;gap:2px}
-  .e1-ic{width:42px;height:42px;display:grid;place-items:center;background:none;border:0;color:#e9e6f5;cursor:pointer;border-radius:10px}
-  .e1-ic:hover{background:#15111f}
-  .e1-ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
-  .e1-layer{position:fixed;inset:0;z-index:100;background:#000;overflow-y:auto;display:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:#e9e6f5}
-  .e1-layer.open{display:block}
-  .e1-top{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;max-width:720px;margin:0 auto}
-  .e1-menu{max-width:720px;margin:0 auto;padding:4px 24px 48px}
-  .e1-label{font-size:12px;letter-spacing:.14em;color:#8a85a3;margin:30px 0 6px}
-  .e1-link{display:flex;align-items:baseline;gap:14px;width:100%;padding:15px 0;border:0;border-bottom:1px solid #1c1830;background:none;color:#e9e6f5;text-decoration:none;font:700 26px/1.3 inherit;font-family:inherit;text-align:left;cursor:pointer}
-  .e1-link small{font-size:13px;font-weight:400;letter-spacing:.06em;color:#8a85a3;width:26px;flex:none}
-  .e1-link:hover,.e1-link.on{color:#a78bfa}
-  .e1-link.sm{font-size:19px;font-weight:600}
-  .e1-search{max-width:720px;margin:0 auto;padding:4px 20px 48px}
-  .e1-sbar{display:flex;align-items:center;gap:8px;border-bottom:2px solid #7c5cff;padding:6px 0}
-  .e1-sbar input{flex:1;min-width:0;background:none;border:0;outline:0;color:#e9e6f5;font-size:22px;font-weight:600;padding:10px 0;font-family:inherit}
-  .e1-sbar input::placeholder{color:#4d4863}
-  .e1-hint{color:#8a85a3;font-size:14px;margin:18px 2px}
-  .e1-res{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #1c1830;padding:14px 2px;color:#e9e6f5;cursor:pointer;font-family:inherit}
-  .e1-res:hover{background:#0e0b18}
-  .e1-res .t{font-size:16px;font-weight:600;overflow-wrap:anywhere}
-  .e1-res .m{font-size:13px;color:#8a85a3;margin-top:5px}
-  .e1-res .b{color:#a78bfa}
-  `;
+  function init(sb, opts) {
+    opts = opts || {};
+    if (document.querySelector("header.top")) return;
+    const active = opts.active || "";
+    const write = opts.write === false ? null : Object.assign({ href: "board.html?b=free", label: "글쓰기" }, opts.write || {});
+    const signOut = () => GH.signOut();
 
-  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  function layerTop(onClose) {
-    const top = el("div", "e1-top");
-    const home = el("a", "e1-wordmark", NAME); home.href = "main.html"; home.setAttribute("aria-label", "홈");
-    const x = el("button", "e1-ic"); x.setAttribute("aria-label", "닫기"); x.innerHTML = ICON_X; x.onclick = onClose;
-    top.append(home, x); return top;
-  }
+    /* ----- 상단바 ----- */
+    const searchBtn = h("button", { class: "search-trigger", type: "button", "aria-label": "검색 열기" }, ic("search"), h("span", { class: "st" }, "글 검색"), h("kbd", null, "Ctrl K"));
+    const menuBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "메뉴 열기", html: ICON.menu });
+    let writeBtn = null;
+    if (write) {
+      writeBtn = h(write.onClick ? "button" : "a", { class: "btn-primary write-btn", href: write.onClick ? null : write.href, type: write.onClick ? "button" : null }, ic("pen"), write.label);
+      if (write.onClick) writeBtn.addEventListener("click", write.onClick);
+    }
+    const header = h("header", { class: "top" },
+      h("div", { class: "top-in" },
+        h("a", { class: "brand", href: "main.html", "aria-label": NAME + " 홈" }, NAME),
+        h("nav", { class: "links", "aria-label": "주요 메뉴" }, LINKS.map((l) => h("a", { href: l.href, class: active === l.key ? "on" : null, "aria-current": active === l.key ? "page" : null }, l.label))),
+        h("span", { class: "spacer" }),
+        searchBtn,
+        h("button", { class: "icon-btn", type: "button", "data-theme-toggle": "", "aria-label": "테마 바꾸기" }),
+        writeBtn,
+        menuBtn));
+    document.body.prepend(header);
 
-  window.E1Nav = {
-    boards: BOARDS, boardName,
-    init(sb, opts) {
-      opts = opts || {};
-      if (document.getElementById("e1-header")) return;
-      const st = el("style"); st.textContent = CSS; document.head.appendChild(st);
+    /* ----- 검색 레이어 ----- */
+    const q = h("input", { id: "e1-q", type: "search", placeholder: "공지와 게시글 제목·내용에서 찾기", maxlength: "40", autocomplete: "off" });
+    const sres = h("div", { class: "sres" }, h("div", { class: "shint" }, "두 글자 이상 입력하세요."));
+    const searchLayer = h("div", { class: "layer", role: "dialog", "aria-modal": "true", "aria-label": "검색" },
+      h("div", { class: "scrim", "data-close": "" }),
+      h("div", { class: "sheet search-sheet" },
+        h("div", { class: "sbar" }, ic("search"), q, h("button", { class: "icon-btn", type: "button", "data-close": "", "aria-label": "검색 닫기", html: ICON.close })),
+        sres));
 
-      /* 상단바 */
-      const header = el("div"); header.id = "e1-header";
-      const logo = el("a", "e1-wordmark", NAME); logo.href = "main.html"; logo.setAttribute("aria-label", "홈");
-      const tools = el("div", "tools");
-      const bs = el("button", "e1-ic"); bs.setAttribute("aria-label", "검색창 열기"); bs.innerHTML = ICON_S;
-      const bm = el("button", "e1-ic"); bm.setAttribute("aria-label", "메인 메뉴 열기"); bm.innerHTML = ICON_M;
-      tools.append(bs, bm); header.append(logo, tools); document.body.prepend(header);
+    /* ----- 메뉴 레이어 ----- */
+    const menuClose = h("button", { class: "icon-btn", type: "button", "data-close": "", "aria-label": "메뉴 닫기", html: ICON.close });
+    const menuLayer = h("div", { class: "layer", role: "dialog", "aria-modal": "true", "aria-label": "메뉴" },
+      h("div", { class: "scrim", "data-close": "" }),
+      h("div", { class: "sheet menu-sheet" },
+        h("div", { class: "menu-top" }, h("a", { class: "brand", href: "main.html" }, NAME), menuClose),
+        h("div", { class: "menu-body" },
+          h("div", { class: "menu-lbl" }, "게시판"),
+          BOARDS.map((b, i) => h("a", { class: "menu-link" + (active === b.key ? " on" : ""), href: b.href }, h("small", null, String(i + 1).padStart(2, "0")), b.name)),
+          h("div", { class: "menu-lbl" }, "커뮤니티"),
+          h("a", { class: "menu-link" + (active === "home" ? " on" : ""), href: "main.html" }, ic("home"), "홈"),
+          h("a", { class: "menu-link" + (active === "chat" ? " on" : ""), href: "chat.html" }, ic("chat"), "전체 채팅"),
+          opts.isAdmin ? h("a", { class: "menu-link" + (active === "admin" ? " on" : ""), href: "admin.html" }, ic("list"), "관리") : null,
+          h("div", { class: "menu-lbl" }, "설정"),
+          h("button", { class: "menu-link", type: "button", "data-theme-toggle": "" }, h("i", { class: "ic" }), h("span", { "data-theme-label": "" }, "테마 바꾸기")),
+          h("button", { class: "menu-link danger", type: "button", onclick: signOut }, "로그아웃"))));
 
-      const lock = (on) => { document.documentElement.style.overflow = on ? "hidden" : ""; };
+    document.body.append(searchLayer, menuLayer);
 
-      /* 메뉴 */
-      const menu = el("div", "e1-layer");
-      const closeMenu = () => { menu.classList.remove("open"); lock(false); };
-      const box = el("div", "e1-menu");
-      box.appendChild(el("div", "e1-label", "게시판"));
-      BOARDS.forEach((b, i) => {
-        const a = el("a", "e1-link" + (opts.active === b.key ? " on" : "")); a.href = b.href;
-        a.append(el("small", "", String(i + 1).padStart(2, "0")), b.name); box.appendChild(a);
-      });
-      box.appendChild(el("div", "e1-label", "커뮤니티"));
-      const chat = el("a", "e1-link sm" + (opts.active === "chat" ? " on" : "")); chat.href = "chat.html"; chat.textContent = "전체 채팅"; box.appendChild(chat);
-      if (opts.isAdmin) {
-        const ad = el("a", "e1-link sm" + (opts.active === "admin" ? " on" : "")); ad.href = "admin.html"; ad.textContent = "관리"; box.appendChild(ad);
-      }
-      box.appendChild(el("div", "e1-label", "계정"));
-      const out = el("button", "e1-link sm", "로그아웃");
-      out.onclick = async () => { await sb.auth.signOut(); location.replace("index.html"); };
-      box.appendChild(out);
-      menu.append(layerTop(closeMenu), box); document.body.appendChild(menu);
-      bm.onclick = () => { menu.classList.add("open"); lock(true); };
+    /* ----- 휴대폰 탭바 ----- */
+    if (opts.tabbar !== false) {
+      const tabBoards = h("button", { type: "button", class: ["free", "tips", "qna", "notice"].includes(active) ? "on" : null }, ic("list"), "게시판");
+      const tabSearch = h("button", { type: "button" }, ic("search"), "검색");
+      let tabWrite;
+      if (write && write.onClick) { tabWrite = h("button", { type: "button", class: "plus", "aria-label": write.label }, ic("pen"), write.label); tabWrite.addEventListener("click", write.onClick); }
+      else tabWrite = h("a", { class: "plus", href: write ? write.href : "board.html?b=free", "aria-label": "글쓰기" }, ic("pen"), "글쓰기");
+      const bar = h("nav", { class: "tabbar", "aria-label": "빠른 이동" },
+        h("a", { href: "main.html", class: active === "home" ? "on" : null }, ic("home"), "홈"),
+        tabBoards, tabWrite,
+        h("a", { href: "chat.html", class: active === "chat" ? "on" : null }, ic("chat"), "채팅"),
+        tabSearch);
+      document.body.append(bar);
+      document.body.classList.add("has-tabbar");
+      tabBoards.addEventListener("click", () => open(menuLayer));
+      tabSearch.addEventListener("click", () => open(searchLayer));
+    }
 
-      /* 검색 */
-      const sl = el("div", "e1-layer");
-      const closeSearch = () => { sl.classList.remove("open"); lock(false); };
-      const wrap = el("div", "e1-search");
-      const bar = el("div", "e1-sbar");
-      const inp = el("input"); inp.type = "search"; inp.placeholder = "검색어를 입력하세요"; inp.maxLength = 40; inp.autocomplete = "off";
-      bar.appendChild(inp);
-      const res = el("div"); const hint = el("div", "e1-hint", "제목과 내용에서 두 글자 이상으로 찾아요.");
-      wrap.append(bar, hint, res);
-      sl.append(layerTop(closeSearch), wrap); document.body.appendChild(sl);
-      bs.onclick = () => { sl.classList.add("open"); lock(true); setTimeout(() => inp.focus(), 50); };
+    /* ----- 열고 닫기 ----- */
+    let lastFocus = null;
+    function open(layer) {
+      lastFocus = document.activeElement;
+      layer.classList.add("open");
+      document.documentElement.style.overflow = "hidden";
+      if (layer === searchLayer) setTimeout(() => q.focus(), 30); else menuClose.focus();
+    }
+    function closeAll() {
+      [searchLayer, menuLayer].forEach((l) => l.classList.remove("open"));
+      document.documentElement.style.overflow = "";
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    document.querySelectorAll(".layer [data-close]").forEach((e) => e.addEventListener("click", closeAll));
+    searchBtn.addEventListener("click", () => open(searchLayer));
+    menuBtn.addEventListener("click", () => open(menuLayer));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAll();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); open(searchLayer); }
+      if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); open(searchLayer); }
+    });
 
-      let timer = null, seq = 0;
-      const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
-      async function run(raw) {
-        const my = ++seq, t = raw.replace(/[%,()*\\"]/g, " ").trim();
-        res.replaceChildren();
-        if (t.length < 2) { hint.textContent = "제목과 내용에서 두 글자 이상으로 찾아요."; return; }
-        hint.textContent = "찾는 중...";
+    /* ----- 검색 ----- */
+    let timer = null, seq = 0;
+    async function run(raw) {
+      const my = ++seq, t = raw.replace(/[%,()*\\"]/g, " ").trim();
+      if (t.length < 2) return sres.replaceChildren(h("div", { class: "shint" }, "두 글자 이상 입력하세요."));
+      sres.replaceChildren(h("div", { class: "shint" }, "찾는 중..."));
+      let rows = [];
+      if (DEMO) {
+        const hit = (x) => x.title.includes(t);
+        rows = [...GH.DEMO_DATA.notices.filter(hit).map((r) => ({ ...r, board: "notice" })), ...GH.DEMO_DATA.posts.filter(hit)];
+      } else {
         const f = `title.ilike.%${t}%,content.ilike.%${t}%`;
         const [p, n] = await Promise.all([
           sb.from("posts").select("id,title,board,created_at").or(f).order("created_at", { ascending: false }).limit(30),
           sb.from("notices").select("id,title,created_at").or(f).order("created_at", { ascending: false }).limit(10),
         ]);
         if (my !== seq) return;                         // 더 최신 검색이 있으면 버려요
-        if (p.error && n.error) { hint.textContent = "검색하지 못했어요."; return; }
-        const rows = [
-          ...(n.data || []).map(r => ({ ...r, board: "notice", href: "notice.html?id=" + r.id })),
-          ...(p.data || []).map(r => ({ ...r, href: "board.html?b=" + r.board + "&id=" + r.id })),
-        ];
-        hint.textContent = rows.length ? rows.length + "건을 찾았어요." : "검색 결과가 없어요.";
-        rows.forEach(r => {
-          const b = el("button", "e1-res");
-          b.append(el("div", "t", r.title));
-          const m = el("div", "m"); m.append(el("span", "b", boardName(r.board)), " · " + fmt(r.created_at));
-          b.appendChild(m); b.onclick = () => { location.href = r.href; }; res.appendChild(b);
-        });
+        if (p.error && n.error) return sres.replaceChildren(h("div", { class: "shint" }, "검색하지 못했어요."));
+        rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || [])];
       }
-      inp.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => run(inp.value), 300); });
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeMenu(); closeSearch(); } });
-    },
-  };
+      if (!rows.length) return sres.replaceChildren(h("div", { class: "shint" }, "‘" + t + "’ 검색 결과가 없어요."));
+      sres.replaceChildren(h("div", { class: "shint" }, rows.length + "건을 찾았어요."), ...rows.map((r) =>
+        h("a", { href: boardHref(r.board, r.id) }, h("div", { class: "t" }, r.title), h("div", { class: "m" }, h("b", null, boardName(r.board)), " · " + ago(r.created_at)))));
+    }
+    q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => run(q.value), 300); });
+
+    GH.theme.sync();
+  }
+
+  window.E1Nav = { boards: BOARDS, boardName, init };
 })();

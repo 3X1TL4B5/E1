@@ -4,73 +4,67 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>E1 · 가입</title>
-<style>
-  :root { --bg:#000; --violet:#7c5cff; --violet-soft:#a78bfa; --text:#e9e6f5; --muted:#8a85a3; --line:#2a2540; --panel:#0b0912; --danger:#ff6b81; --ok:#7ee2a8; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body { background:var(--bg); color:var(--text); font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; display:flex; align-items:center; justify-content:center; padding:env(safe-area-inset-top,0) 20px env(safe-area-inset-bottom,0); }
-  main { width:100%; max-width:340px; text-align:center; }
-  .logo { width:130px; height:130px; filter:drop-shadow(0 0 24px rgba(124,92,255,.45)); }
-  h1 { margin:14px 0 8px; font-size:20px; }
-  .sub { margin:0 0 24px; font-size:14px; color:var(--muted); line-height:1.6; }
-  form { display:grid; gap:12px; }
-  input { width:100%; padding:15px 16px; font-size:16px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:10px; outline:none; }
-  input::placeholder { color:var(--muted); }
-  input:focus { border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,92,255,.25); }
-  .otp { text-align:center; font-size:26px; letter-spacing:8px; }
-  .primary { padding:15px; font-size:16px; font-weight:600; color:#fff; background:var(--violet); border:0; border-radius:10px; cursor:pointer; }
-  .primary:hover { background:#6a49f0; } .primary:disabled { opacity:.6; cursor:default; }
-  .link { background:none; border:0; color:var(--violet-soft); font-size:14px; cursor:pointer; margin-top:14px; }
-  .link:disabled { color:var(--muted); cursor:default; }
-  .msg { min-height:20px; margin:14px 0 0; font-size:14px; color:var(--danger); line-height:1.5; }
-  .msg.ok { color:var(--ok); }
-  .note { margin-top:22px; font-size:13px; color:var(--muted); }
-  .note a { color:var(--violet-soft); }
-  .hidden { display:none !important; }
-</style>
+<meta name="theme-color" content="#EEF0F6">
+<title>가입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&display=swap">
+<link rel="stylesheet" href="theme.css">
+<script src="config.js"></script>
+<script src="common.js"></script>
 </head>
-<body>
-<main>
+<body class="auth-body">
+<button class="icon-btn theme-fab" type="button" data-theme-toggle aria-label="테마 바꾸기"></button>
 
-  <section id="s-check"><p class="sub">초대 링크를 확인하는 중...</p></section>
-
-  <section id="s-bad" class="hidden">
-    <h1>입장할 수 없어요</h1>
-    <p class="sub">초대 링크가 없거나, 만료되었거나, 인원이 가득 찼어요.<br>관리자에게 새 링크를 요청해 주세요.</p>
-    <p class="note"><a href="index.html">로그인 화면으로</a></p>
+<main class="auth">
+  <section class="auth-brand">
+    <div class="auth-copy">
+      <p class="eyebrow">MEMBERS ONLY</p>
+      <h1 data-site-name>E1</h1>
+      <p class="auth-lead">초대 링크로 가입할 수 있어요. 이메일 인증까지 마치면 바로 입장해요.</p>
+    </div>
   </section>
 
-  <section id="s-form" class="hidden">
-    <h1>E1 가입</h1>
-    <p class="sub">초대를 받았어요. 이메일과 비밀번호를 정해 주세요.</p>
-    <form id="form">
-      <input id="email" type="email" placeholder="이메일" autocomplete="username" required>
-      <input id="pw1" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="new-password" minlength="8" required>
-      <input id="pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" minlength="8" required>
-      <button class="primary" id="btn" type="submit">인증 코드 받기</button>
-    </form>
-    <p id="msg" class="msg" role="alert"></p>
-    <p class="note">이미 계정이 있나요? <a href="index.html">로그인</a></p>
-  </section>
+  <section class="auth-panel">
+    <div class="auth-card">
+      <div id="s-check"><p class="sub">초대 링크를 확인하는 중...</p></div>
 
-  <section id="s-otp" class="hidden">
-    <h1>이메일 인증</h1>
-    <p class="sub"><b id="sent-to"></b> 로 보낸<br>인증 코드를 입력해 주세요.</p>
-    <form id="otp-form">
-      <input id="otp" class="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000" required>
-      <button class="primary" id="otp-btn" type="submit">가입 완료</button>
-    </form>
-    <p id="otp-msg" class="msg" role="alert"></p>
-    <button class="link" id="resend">코드 다시 받기</button>
-    <p class="note">메일이 안 보이면 스팸함도 확인해 주세요.</p>
+      <div id="s-bad" class="hidden">
+        <h2>입장할 수 없어요</h2>
+        <p class="sub">초대 링크가 없거나, 만료되었거나, 인원이 가득 찼어요.<br>관리자에게 새 링크를 요청해 주세요.</p>
+        <p class="note"><a href="index.html">로그인 화면으로</a></p>
+      </div>
+
+      <div id="s-form" class="hidden">
+        <h2>가입하기</h2>
+        <p class="sub">초대를 받았어요. 이메일과 비밀번호를 정해 주세요.</p>
+        <form id="form">
+          <label class="field"><span>이메일</span><input class="input" id="email" type="email" placeholder="you@example.com" autocomplete="username" required></label>
+          <label class="field"><span>비밀번호</span><input class="input" id="pw1" type="password" placeholder="8자 이상" autocomplete="new-password" minlength="8" required></label>
+          <label class="field"><span>비밀번호 확인</span><input class="input" id="pw2" type="password" placeholder="한 번 더 입력" autocomplete="new-password" minlength="8" required></label>
+          <button class="btn-primary" id="btn" type="submit">인증 코드 받기</button>
+        </form>
+        <p id="msg" class="msg" role="alert"></p>
+        <p class="note">이미 계정이 있나요? <a href="index.html">로그인</a></p>
+      </div>
+
+      <div id="s-otp" class="hidden">
+        <h2>이메일 인증</h2>
+        <p class="sub"><b id="sent-to"></b> 로 보낸<br>인증 코드를 입력해 주세요.</p>
+        <form id="otp-form">
+          <label class="field"><span>인증 코드</span><input class="input otp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000" required></label>
+          <button class="btn-primary" id="otp-btn" type="submit">가입 완료</button>
+        </form>
+        <p id="otp-msg" class="msg" role="alert"></p>
+        <button class="link-btn" id="resend" type="button">코드 다시 받기</button>
+        <p class="note">메일이 안 보이면 스팸함도 확인해 주세요.</p>
+      </div>
+    </div>
   </section>
 </main>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
 <script>
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = GH.sb();
   const $ = (id) => document.getElementById(id);
   const code = new URLSearchParams(location.search).get("code") || "";
   let email = "";

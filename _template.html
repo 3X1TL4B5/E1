@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- 새 페이지 시작용 틀: 이 파일을 복사해서 이름을 바꾸고 쓰세요. 규칙은 CLAUDE.md -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EEF0F6">
+<title>페이지 이름</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+<script src="config.js"></script>
+<script src="common.js"></script>
+<style>
+  /* 이 페이지에만 필요한 스타일. 색은 theme.css 토큰(var(--...))만 쓰세요. */
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head"><div><p>분류</p><h1>페이지 이름</h1></div></div>
+  <section class="tile">
+    <div class="tile-hd"><span class="lbl">구역 이름</span></div>
+    <div class="list" id="box"><div class="skel"></div></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="nav.js"></script>
+<script>
+  const sb = GH.sb();
+  const { h } = GH;
+  const $ = (id) => document.getElementById(id);
+
+  (async () => {
+    const s = await GH.session();
+    if (!s) return location.replace("index.html");
+    const user = s.user;
+    const a = await sb.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
+    E1Nav.init(sb, { active: "", isAdmin: !!a.data });
+    // 여기서 데이터를 불러와 h()로 그리세요 (글 내용은 textContent로만)
+    $("box").replaceChildren(h("div", { class: "empty" }, "내용이 여기에 나와요."));
+  })();
+</script>
+</body>
+</html>

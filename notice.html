@@ -4,85 +4,64 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>E1 · 공지사항</title>
-<style>
-  :root { --bg:#000; --violet:#7c5cff; --violet-soft:#a78bfa; --text:#e9e6f5; --muted:#8a85a3; --line:#2a2540; --panel:#0b0912; --danger:#ff6b81; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); }
-  button { font-family:inherit; cursor:pointer; }
-  .hidden { display:none !important; }
-  .ghost { background:none; border:1px solid var(--line); color:var(--muted); padding:7px 12px; border-radius:8px; font-size:13px; text-decoration:none; }
-  .ghost:hover { color:var(--text); border-color:var(--violet); }
-  .ghost.on { color:#fff; background:var(--violet); border-color:var(--violet); }
-  .ghost.danger { color:var(--danger); border-color:#4a2530; }
-  .primary { padding:14px; font-size:16px; font-weight:600; color:#fff; background:var(--violet); border:0; border-radius:10px; }
-  .primary:disabled { opacity:.6; }
-  .wrap { max-width:720px; margin:0 auto; padding:16px; }
-  .bar { display:flex; justify-content:space-between; align-items:center; margin:4px 0 12px; }
-  .bar h2 { margin:0; font-size:18px; }
-  .item { display:block; width:100%; text-align:left; padding:14px 4px; background:none; border:0; border-bottom:1px solid var(--line); color:var(--text); }
-  .item:hover { background:#0e0b18; }
-  .item .t { font-size:16px; font-weight:600; overflow-wrap:anywhere; }
-  .item .m { font-size:13px; color:var(--muted); margin-top:6px; }
-  .pin { display:inline-block; margin-right:6px; padding:1px 7px; font-size:11px; font-weight:700; color:#fff; background:var(--violet); border-radius:6px; vertical-align:2px; }
-  .empty { text-align:center; color:var(--muted); padding:48px 0; }
-  .detail h2 { font-size:21px; margin:14px 0 8px; overflow-wrap:anywhere; }
-  .detail .m { font-size:13px; color:var(--muted); margin-bottom:20px; }
-  .detail .body { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.75; font-size:16px; }
-  .row { display:flex; gap:8px; margin-top:24px; } .row > * { flex:1; }
-  form { display:grid; gap:12px; }
-  input, textarea { width:100%; padding:14px 16px; font-size:16px; font-family:inherit; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:10px; outline:none; }
-  input:focus, textarea:focus { border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,92,255,.25); }
-  input[type=checkbox] { width:20px; height:20px; padding:0; accent-color:var(--violet); }
-  textarea { min-height:240px; resize:vertical; line-height:1.6; }
-  label.chk { display:flex; align-items:center; gap:10px; font-size:15px; color:var(--text); }
-  .msg { min-height:20px; margin:12px 0 0; font-size:14px; color:var(--danger); }
-</style>
+<meta name="theme-color" content="#EEF0F6">
+<title>공지사항</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+<script src="config.js"></script>
+<script src="common.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <div id="list-view">
-    <div class="bar"><h2>공지사항</h2><button class="primary hidden" id="go-write" style="padding:9px 16px;font-size:14px">공지 쓰기</button></div>
-    <div id="items"></div>
+<main class="page">
+  <div id="list-view" class="stack">
+    <div class="page-head"><div><p>게시판 01</p><h1>공지사항</h1><p class="hint" style="margin-top:4px">운영 소식과 안내</p></div></div>
+    <section class="tile"><div class="list" id="items"><div class="skel"></div></div></section>
   </div>
 
-  <div id="write-view" class="hidden">
-    <div class="bar"><h2 id="w-head">공지 쓰기</h2></div>
-    <form id="form">
-      <input id="w-title" placeholder="제목" maxlength="100" required>
-      <textarea id="w-content" placeholder="내용" maxlength="5000" required></textarea>
-      <label class="chk"><input type="checkbox" id="w-pin"> 목록 맨 위에 고정</label>
-      <div class="row">
-        <button class="ghost" type="button" id="w-cancel" style="padding:14px">취소</button>
-        <button class="primary" id="w-btn" type="submit">저장</button>
+  <div id="write-view" class="stack hidden">
+    <div class="page-head"><div><p>공지사항</p><h1 id="w-head">공지 쓰기</h1></div></div>
+    <section class="tile">
+      <form id="form">
+        <input id="w-title" placeholder="제목" maxlength="100" required>
+        <textarea id="w-content" placeholder="내용" maxlength="5000" required></textarea>
+        <label class="chk"><input type="checkbox" id="w-pin"> 목록 맨 위에 고정</label>
+        <div class="row">
+          <button class="ghost" type="button" id="w-cancel">취소</button>
+          <button class="primary" id="w-btn" type="submit">저장</button>
+        </div>
+      </form>
+      <p id="w-msg" class="msg" role="alert"></p>
+    </section>
+  </div>
+
+  <div id="detail-view" class="stack hidden">
+    <div><button class="ghost" id="back" type="button">← 목록</button></div>
+    <section class="tile detail">
+      <h2 id="d-title"></h2>
+      <div class="m" id="d-meta"></div>
+      <div class="body" id="d-body"></div>
+      <div class="row hidden" id="d-admin">
+        <button class="ghost" id="d-edit" type="button">수정</button>
+        <button class="ghost danger" id="d-del" type="button">삭제</button>
       </div>
-    </form>
-    <p id="w-msg" class="msg" role="alert"></p>
+    </section>
   </div>
-
-  <div id="detail-view" class="hidden detail">
-    <button class="ghost" id="back">← 목록</button>
-    <h2 id="d-title"></h2>
-    <div class="m" id="d-meta"></div>
-    <div class="body" id="d-body"></div>
-    <div class="row hidden" id="d-admin">
-      <button class="ghost" id="d-edit" style="padding:12px">수정</button>
-      <button class="ghost danger" id="d-del" style="padding:12px">삭제</button>
-    </div>
-  </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
 <script src="nav.js"></script>
 <script>
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = GH.sb();
   const $ = (id) => document.getElementById(id);
   let me = null, isAdmin = false, current = null, editingId = null;
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
   const show = (n) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== n));
 
   async function loadList() {
+    history.replaceState(null, "", "notice.html");
     show("list");
     const box = $("items"); box.replaceChildren();
     const { data, error } = await sb.from("notices").select("id,title,pinned,created_at").order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(50);
@@ -90,7 +69,7 @@
     if (error) return note("불러오지 못했어요: " + error.message);
     if (!data.length) return note("등록된 공지가 없어요.");
     data.forEach(n => {
-      const b = document.createElement("button"); b.className = "item";
+      const b = document.createElement("button"); b.className = "list-item"; b.type = "button";
       const t = document.createElement("div"); t.className = "t";
       if (n.pinned) { const p = document.createElement("span"); p.className = "pin"; p.textContent = "고정"; t.appendChild(p); }
       t.append(n.title);
@@ -101,8 +80,9 @@
 
   async function openNotice(id) {
     const { data, error } = await sb.from("notices").select("id,title,content,pinned,created_at,updated_at").eq("id", id).single();
-    if (error) return alert("공지를 불러오지 못했어요.");
+    if (error) { alert("공지를 불러오지 못했어요."); return loadList(); }
     current = data;
+    history.replaceState(null, "", "notice.html?id=" + id);
     $("d-title").textContent = data.title;
     $("d-meta").textContent = fmt(data.created_at) + (data.updated_at && data.updated_at.slice(0, 10) !== data.created_at.slice(0, 10) ? " (수정 " + fmt(data.updated_at) + ")" : "");
     $("d-body").textContent = data.content;
@@ -114,10 +94,9 @@
     editingId = n ? n.id : null;
     $("w-head").textContent = n ? "공지 수정" : "공지 쓰기";
     $("w-title").value = n ? n.title : ""; $("w-content").value = n ? n.content : ""; $("w-pin").checked = n ? n.pinned : false;
-    $("w-msg").textContent = ""; show("write");
+    $("w-msg").textContent = ""; show("write"); window.scrollTo(0, 0);
   }
 
-  $("go-write").onclick = () => openForm(null);
   $("w-cancel").onclick = () => (editingId && current ? openNotice(current.id) : loadList());
   $("back").onclick = loadList;
   $("d-edit").onclick = () => openForm(current);
@@ -149,9 +128,10 @@
     if (!p.data) return location.replace("main.html");          // 닉네임부터 정하기
     const a = await sb.from("admins").select("user_id").eq("user_id", me.id).maybeSingle();
     isAdmin = !!a.data;
-    E1Nav.init(sb, { active: "notice", isAdmin });
-    $("go-write").classList.toggle("hidden", !isAdmin);
-    loadList();
+    // 관리자는 상단 버튼이 '공지 쓰기', 회원은 기본 글쓰기(자유게시판)
+    E1Nav.init(sb, { active: "notice", isAdmin, write: isAdmin ? { label: "공지 쓰기", onClick: () => openForm(null) } : {} });
+    const id = new URLSearchParams(location.search).get("id");
+    if (id && /^\d+$/.test(id)) openNotice(id); else loadList();
   })();
 </script>
 </body>

@@ -10,49 +10,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap">
 <link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
 <script src="config.js"></script>
 <script src="common.js"></script>
 <style>
-  /* ---------- 상단바 ---------- */
-  .top {
-    position: sticky; top: 0; z-index: 50;
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border-bottom: 1px solid var(--line);
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .top-in {
-    max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 8px; height: 60px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--f-display); font-weight: 800; font-size: 18px; letter-spacing: -.01em; margin-right: 12px; flex: none; }
-  .brand img { width: 34px; height: 34px; border-radius: 9px; display: block; }
-  .links { display: flex; gap: 2px; }
-  .links a { padding: 8px 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); }
-  .links a:hover { background: var(--surface-2); color: var(--fg); }
-  .spacer { flex: 1; }
-  .search-trigger {
-    display: flex; align-items: center; gap: 8px; width: 240px; padding: 8px 10px 8px 12px; border-radius: 12px;
-    background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 14px; cursor: pointer;
-  }
-  .search-trigger:hover { border-color: var(--accent); }
-  .search-trigger .ic svg { width: 18px; height: 18px; }
-  .search-trigger span:not(.ic) { flex: 1; text-align: left; }
-  kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
-  .write-btn { padding: 9px 16px; font-size: 14px; border-radius: 12px; }
-  .write-btn .ic svg { width: 18px; height: 18px; }
-
-  /* ---------- 홈 ---------- */
-  .hub {
-    max-width: 1280px; margin: 0 auto;
-    padding-block: 26px 56px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
-  .hello { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
-  .hello p { margin: 0 0 4px; color: var(--muted); font-size: 14px; }
-  .hello h1 { margin: 0; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.02em; line-height: 1.25; text-wrap: balance; }
-  .hello h1 b { color: var(--accent-ink); }
-
+  /* ---------- 벤토 배치 ---------- */
   .bento {
     display: grid; gap: 12px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -70,18 +32,6 @@
   .t-notice { grid-area: notice; } .t-recent { grid-area: recent; } .t-online { grid-area: online; }
   .t-me { grid-area: me; } .t-chat { grid-area: chat; } .t-boards { grid-area: boards; }
 
-  .tile {
-    min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-tile);
-    padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow);
-  }
-  .tile-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .lbl { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-  .more { font-size: 13px; font-weight: 600; color: var(--accent-ink); text-decoration: none; white-space: nowrap; }
-  .more:hover { text-decoration: underline; }
-  .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
-  .skel { height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--line), var(--surface-2)); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
-  @keyframes sk { to { background-position: -200% 0; } }
-
   /* 공지 (메인 타일) */
   .t-notice {
     color: var(--on-hero); border: 0; min-height: 260px; justify-content: space-between;
@@ -91,7 +41,7 @@
   }
   .t-notice .lbl { color: rgba(255, 255, 255, .78); }
   .t-notice .more { color: #fff; }
-  .pin { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #FFD84D; color: #2B2300; letter-spacing: 0; }
+  .t-notice .pin { background: #FFD84D; color: #2B2300; margin: 0; }
   .n-main { text-decoration: none; display: flex; flex-direction: column; gap: 8px; }
   .n-main h2 { margin: 0; font-family: var(--f-display), var(--f-body); font-size: clamp(22px, 2.6vw, 32px); line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; overflow-wrap: anywhere; }
   .n-main:hover h2 { text-decoration: underline; text-underline-offset: 4px; }
@@ -102,6 +52,7 @@
   .n-sub a small { color: rgba(255, 255, 255, .65); white-space: nowrap; }
   .n-sub a:hover b { text-decoration: underline; }
   .t-notice .skel { background: rgba(255, 255, 255, .18); animation: none; }
+  .t-notice .empty { color: inherit; text-align: left; padding: 8px 0; }
 
   /* 최근 글 */
   .plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -109,9 +60,8 @@
   .plist a { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 10px 2px; text-decoration: none; border-radius: 8px; }
   .plist a:hover { background: var(--surface-2); }
   .plist em { font-style: normal; font-family: var(--f-display); font-weight: 800; color: var(--accent-ink); }
-  .plist .tt { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plist .tt { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .plist .mt { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-  .plist .bd { font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 
   /* 지금 접속 */
   .t-online { background: var(--yellow); color: var(--on-yellow); border-color: transparent; justify-content: space-between; }
@@ -129,9 +79,8 @@
   /* 내 정보 */
   .t-me { justify-content: space-between; }
   .me-name { font-size: 20px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .badge { font-size: 11px; font-weight: 800; color: #fff; background: #D6334A; padding: 2px 7px; border-radius: 6px; }
+  .me-name .badge { margin: 0; }
   .me-meta { font-size: 13px; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
-  .me-act { display: flex; gap: 6px; flex-wrap: wrap; }
 
   /* 채팅 (진한 타일) */
   .t-chat { background: var(--ink); color: var(--on-ink); border-color: transparent; }
@@ -146,7 +95,7 @@
   .mrow p { margin: 1px 0 0; overflow-wrap: anywhere; color: var(--on-ink); opacity: .9; }
   .chat-go { align-self: stretch; background: rgba(255, 255, 255, .08); color: var(--on-ink); border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px; padding: 11px; text-align: center; text-decoration: none; font-weight: 700; font-size: 14px; }
   .chat-go:hover { background: rgba(255, 255, 255, .14); }
-  .t-chat .empty { color: var(--ink-muted); }
+  .t-chat .empty { color: var(--ink-muted); text-align: left; padding: 8px 0; }
 
   /* 게시판 */
   .blist { display: flex; flex-direction: column; }
@@ -159,79 +108,13 @@
   .blist .ct { font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .blist .ar { color: var(--accent-ink); font-size: 18px; }
 
-  .tile.link-tile { transition: transform .2s; }
-  @media (hover: hover) { .tile.link-tile:hover { transform: translateY(-2px); } }
-
-  /* ---------- 검색 / 메뉴 레이어 ---------- */
-  .layer { position: fixed; inset: 0; z-index: 100; display: none; }
-  .layer.open { display: block; }
-  .scrim { position: absolute; inset: 0; background: rgba(8, 6, 20, .5); }
-  .sheet {
-    position: absolute; background: var(--surface); color: var(--fg); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .5);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .search-sheet { left: 50%; top: calc(10vh + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(640px, calc(100% - 32px)); max-height: 75vh; border-radius: 18px; border: 1px solid var(--line); }
-  .sbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--line); }
-  .sbar .ic { color: var(--muted); }
-  .sbar input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--fg); font: 600 18px var(--f-body); padding: 12px 0; }
-  .sres { overflow-y: auto; padding: 6px; }
-  .shint { color: var(--muted); font-size: 14px; padding: 14px 12px; }
-  .sres a { display: block; padding: 10px 12px; border-radius: 10px; text-decoration: none; }
-  .sres a:hover, .sres a:focus-visible { background: var(--accent-soft); }
-  .sres .t { font-weight: 600; overflow-wrap: anywhere; }
-  .sres .m { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .sres .m b { color: var(--accent-ink); }
-
-  .menu-sheet {
-    top: 0; right: 0; bottom: 0; width: min(380px, 100%);
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) 0;
-    overflow-y: auto; border-left: 1px solid var(--line);
-  }
-  .menu-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 10px 20px; }
-  .menu-body { padding: 0 20px 32px; display: flex; flex-direction: column; }
-  .menu-lbl { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--muted); margin: 22px 0 4px; }
-  .menu-link { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--fg); text-decoration: none; font: 700 19px var(--f-body); text-align: left; cursor: pointer; }
-  .menu-link small { font-family: var(--f-display); font-size: 12px; font-weight: 600; color: var(--muted); width: 22px; }
-  .menu-link:hover { color: var(--accent-ink); }
-  .menu-link .ic svg { width: 20px; height: 20px; }
-  .menu-link.danger { color: var(--danger); }
-
-  /* ---------- 하단 탭바 (휴대폰) ---------- */
-  .tabbar { display: none; }
-  @media (max-width: 699px) {
-    body.has-tabbar .hub { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
-    .tabbar {
-      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-      padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
-      background: color-mix(in srgb, var(--surface) 90%, transparent);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border-top: 1px solid var(--line);
-    }
-    .tabbar a, .tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; background: none; border: 0; color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 600; cursor: pointer; }
-    .tabbar .on { color: var(--accent-ink); }
-    .tabbar .ic svg { width: 22px; height: 22px; }
-    .tabbar .plus .ic { width: 46px; height: 34px; border-radius: 12px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
-  }
-  /* 휴대폰 가로에서는 탭바가 화면을 가리지 않게 상단바를 씁니다 */
-  @media (max-width: 699px) and (orientation: landscape) { .tabbar { display: none; } body.has-tabbar .hub { padding-bottom: 40px; } }
-
-  /* ---------- 화면 크기별 상단바 ---------- */
-  @media (max-width: 1099px) { .links { display: none; } }
-  @media (max-width: 959px) { .search-trigger { width: auto; padding: 0; border: 0; background: none; } .search-trigger span:not(.ic), .search-trigger kbd { display: none; } .search-trigger .ic { width: 42px; height: 42px; display: grid; place-items: center; color: var(--fg); } .search-trigger .ic svg { width: 22px; height: 22px; } }
-  @media (max-width: 599px) { .write-btn { display: none; } .brand { margin-right: 0; } }
-  @media (orientation: landscape) and (max-height: 540px) {
-    .top-in { height: 52px; }
-    .hub { padding-block: 14px 40px; }
-    .hello { margin-bottom: 12px; }
-    .t-notice { min-height: 200px; }
-  }
+  @media (orientation: landscape) and (max-height: 540px) { .t-notice { min-height: 200px; } }
 
   /* ---------- 닉네임 정하기 ---------- */
   .nick-wrap { min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px max(20px, env(safe-area-inset-right, 0px)) 24px max(20px, env(safe-area-inset-left, 0px)); }
   .nick-card { width: 100%; max-width: 360px; text-align: center; }
-  .nick-card img { width: 96px; height: 96px; border-radius: 24px; filter: drop-shadow(0 0 22px rgba(124, 92, 255, .45)); }
-  .nick-card h1 { font-size: 22px; margin: 16px 0 6px; }
+  .nick-card .brand-word { font-family: var(--f-display); font-weight: 800; font-size: 40px; letter-spacing: -.02em; }
+  .nick-card h1 { font-size: 22px; margin: 12px 0 6px; }
   .nick-card .sub { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 22px; }
   .nick-card form { display: grid; gap: 12px; }
 </style>
@@ -241,6 +124,7 @@
 <!-- 닉네임 정하기 (처음 한 번) -->
 <section id="nick-view" class="nick-wrap hidden">
   <div class="nick-card">
+    <div class="brand-word" data-site-name>E1</div>
     <h1>닉네임을 정해 주세요</h1>
     <p class="sub">게시판에는 이메일 대신 닉네임만 보여요.<br>한글·영문·숫자·_ 로 2~12자</p>
     <form id="nick-form">
@@ -251,121 +135,62 @@
   </div>
 </section>
 
-<!-- 홈 -->
-<div id="home-view" class="hidden">
-  <header class="top">
-    <div class="top-in">
-      <a class="brand" href="main.html" aria-label="홈"><span data-site-name>GAME HUB</span></a>
-      <nav class="links" aria-label="주요 메뉴">
-        <a href="notice.html">공지</a><a href="board.html?b=free">자유</a><a href="board.html?b=tips">공략</a><a href="board.html?b=qna">질문</a><a href="chat.html">채팅</a>
-      </nav>
-      <span class="spacer"></span>
-      <button class="search-trigger" id="open-search" type="button" aria-label="검색 열기"><span class="ic" data-icon="search"></span><span>글 검색</span><kbd>Ctrl K</kbd></button>
-      <button class="icon-btn" type="button" data-theme-toggle aria-label="테마 바꾸기"></button>
-      <a class="btn-primary write-btn" href="board.html?b=free"><span class="ic" data-icon="pen"></span>글쓰기</a>
-      <button class="icon-btn" id="open-menu" type="button" aria-label="메뉴 열기" data-icon="menu"></button>
+<!-- 홈 (상단바·메뉴·탭바는 nav.js가 붙여요) -->
+<main id="home-view" class="page hidden">
+  <div class="page-head">
+    <div>
+      <p id="today"></p>
+      <h1><b id="me-name"></b> 님, 어서 오세요</h1>
     </div>
-  </header>
+  </div>
 
-  <main class="hub">
-    <div class="hello">
+  <div class="bento">
+    <section class="tile t-notice" aria-label="공지">
+      <div class="tile-hd"><span class="lbl">공지사항</span><a class="more" href="notice.html">전체 보기 →</a></div>
+      <div id="notice-box"><div class="skel" style="width:70%;height:26px"></div></div>
+    </section>
+
+    <section class="tile t-recent" aria-label="최근 글">
+      <div class="tile-hd"><span class="lbl">최근 글</span><a class="more" href="board.html?b=free">게시판 →</a></div>
+      <ol class="plist" id="recent-box"><li><div class="skel"></div></li><li><div class="skel" style="width:80%"></div></li><li><div class="skel" style="width:60%"></div></li></ol>
+    </section>
+
+    <section class="tile t-online" aria-label="지금 접속">
+      <span class="lbl"><span class="dot"></span>지금 접속</span>
+      <div class="big" id="online-count">–<small>명</small></div>
+      <div class="avs" id="online-avs"></div>
+      <p class="cap">홈 화면을 보고 있는 멤버</p>
+    </section>
+
+    <section class="tile t-me" aria-label="내 정보">
+      <span class="lbl">내 정보</span>
       <div>
-        <p id="today"></p>
-        <h1><b id="me-name"></b> 님, 어서 오세요</h1>
+        <div class="me-name" id="me-nick"></div>
+        <p class="me-meta" id="me-meta"></p>
       </div>
-    </div>
+      <div><button class="ghost" type="button" id="logout">로그아웃</button></div>
+    </section>
 
-    <div class="bento">
-      <section class="tile t-notice" aria-label="공지">
-        <div class="tile-hd"><span class="lbl">공지사항</span><a class="more" href="notice.html">전체 보기 →</a></div>
-        <div id="notice-box"><div class="skel" style="width:70%;height:26px"></div></div>
-      </section>
+    <section class="tile t-chat" aria-label="전체 채팅">
+      <div class="tile-hd"><span class="lbl">전체 채팅 <span class="live">LIVE</span></span></div>
+      <div class="msgs" id="chat-box"><div class="empty">불러오는 중...</div></div>
+      <a class="chat-go" href="chat.html">채팅방 들어가기</a>
+    </section>
 
-      <section class="tile t-recent" aria-label="최근 글">
-        <div class="tile-hd"><span class="lbl">최근 글</span><a class="more" href="board.html?b=free">게시판 →</a></div>
-        <ol class="plist" id="recent-box"><li><div class="skel"></div></li><li><div class="skel" style="width:80%"></div></li><li><div class="skel" style="width:60%"></div></li></ol>
-      </section>
-
-      <section class="tile t-online" aria-label="지금 접속">
-        <span class="lbl"><span class="dot"></span>지금 접속</span>
-        <div class="big" id="online-count">–<small>명</small></div>
-        <div class="avs" id="online-avs"></div>
-        <p class="cap">홈 화면을 보고 있는 멤버</p>
-      </section>
-
-      <section class="tile t-me" aria-label="내 정보">
-        <span class="lbl">내 정보</span>
-        <div>
-          <div class="me-name" id="me-nick"></div>
-          <p class="me-meta" id="me-meta"></p>
-        </div>
-        <div class="me-act">
-          <button class="btn-ghost" type="button" id="logout">로그아웃</button>
-        </div>
-      </section>
-
-      <section class="tile t-chat" aria-label="전체 채팅">
-        <div class="tile-hd"><span class="lbl">전체 채팅 <span class="live">LIVE</span></span></div>
-        <div class="msgs" id="chat-box"><div class="empty">불러오는 중...</div></div>
-        <a class="chat-go" href="chat.html">채팅방 들어가기</a>
-      </section>
-
-      <section class="tile t-boards" aria-label="게시판">
-        <span class="lbl">게시판</span>
-        <nav class="blist" id="board-box"></nav>
-      </section>
-    </div>
-  </main>
-
-  <!-- 휴대폰 하단 탭바 -->
-  <nav class="tabbar" aria-label="빠른 이동">
-    <a class="on" href="main.html"><span class="ic" data-icon="home"></span>홈</a>
-    <button type="button" id="tab-boards"><span class="ic" data-icon="list"></span>게시판</button>
-    <a class="plus" href="board.html?b=free" aria-label="글쓰기"><span class="ic" data-icon="pen"></span>글쓰기</a>
-    <a href="chat.html"><span class="ic" data-icon="chat"></span>채팅</a>
-    <button type="button" id="tab-search"><span class="ic" data-icon="search"></span>검색</button>
-  </nav>
-
-  <!-- 검색 -->
-  <div class="layer" id="search-layer" role="dialog" aria-modal="true" aria-label="검색">
-    <div class="scrim" data-close></div>
-    <div class="sheet search-sheet">
-      <div class="sbar">
-        <span class="ic" data-icon="search"></span>
-        <input id="q" type="search" placeholder="공지와 게시글 제목·내용에서 찾기" maxlength="40" autocomplete="off">
-        <button class="icon-btn" type="button" data-close aria-label="검색 닫기" data-icon="close"></button>
-      </div>
-      <div class="sres" id="sres"><div class="shint">두 글자 이상 입력하세요.</div></div>
-    </div>
+    <section class="tile t-boards" aria-label="게시판">
+      <span class="lbl">게시판</span>
+      <nav class="blist" id="board-box"></nav>
+    </section>
   </div>
-
-  <!-- 메뉴 -->
-  <div class="layer" id="menu-layer" role="dialog" aria-modal="true" aria-label="메뉴">
-    <div class="scrim" data-close></div>
-    <div class="sheet menu-sheet">
-      <div class="menu-top"><span class="brand"><span data-site-name>GAME HUB</span></span><button class="icon-btn" type="button" data-close aria-label="메뉴 닫기" data-icon="close"></button></div>
-      <div class="menu-body">
-        <div class="menu-lbl">게시판</div>
-        <div id="menu-boards"></div>
-        <div class="menu-lbl">커뮤니티</div>
-        <a class="menu-link" href="chat.html"><span class="ic" data-icon="chat"></span>전체 채팅</a>
-        <a class="menu-link hidden" id="menu-admin" href="admin.html"><span class="ic" data-icon="list"></span>관리</a>
-        <div class="menu-lbl">설정</div>
-        <button class="menu-link" type="button" data-theme-toggle><i class="ic"></i><span data-theme-label>테마 바꾸기</span></button>
-        <button class="menu-link danger" type="button" id="menu-logout">로그아웃</button>
-      </div>
-    </div>
-  </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="nav.js"></script>
 <script>
-  const { h, ago, ICON, BOARDS, DEMO, DEMO_DATA: D } = GH;
+  const { h, ago, BOARDS, DEMO, DEMO_DATA: D } = GH;
   const $ = (id) => document.getElementById(id);
   const sb = GH.sb();
   let user = null, isAdmin = false, myNick = "";
-
-  document.querySelectorAll("[data-icon]").forEach((e) => { e.innerHTML = ICON[e.dataset.icon]; });
 
   const PALETTE = ["#7C5CFF", "#E8590C", "#0E8A6B", "#D6336C", "#2B7BE4", "#9C6B00", "#5F3DC4"];
   const colorOf = (s) => { let n = 0; for (const c of s || "") n = (n * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[n % PALETTE.length]; };
@@ -404,13 +229,12 @@
     myNick = nick;
     $("nick-view").classList.add("hidden");
     $("home-view").classList.remove("hidden");
-    document.body.classList.add("has-tabbar");
+    E1Nav.init(sb, { active: "home", isAdmin });
     $("today").textContent = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
     $("me-name").textContent = nick;
     const nn = $("me-nick"); nn.replaceChildren(nick);
     if (isAdmin) nn.append(h("span", { class: "badge" }, "관리자"));
     $("me-meta").textContent = user.email || "";
-    if (isAdmin) $("menu-admin").classList.remove("hidden");
     renderBoards();
     loadNotices(); loadRecent(); loadCounts(); loadChat(); joinPresence(); loadMembers();
   }
@@ -422,7 +246,7 @@
     if (DEMO) rows = D.notices;
     else {
       const { data, error } = await sb.from("notices").select("id,title,pinned,created_at").order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(3);
-      if (error) return box.replaceChildren(h("div", { class: "empty", style: "color:inherit" }, "공지를 불러오지 못했어요."));
+      if (error) return box.replaceChildren(h("div", { class: "empty" }, "공지를 불러오지 못했어요."));
       rows = data;
     }
     if (!rows.length) return box.replaceChildren(h("a", { class: "n-main", href: "notice.html" }, h("h2", null, "아직 공지가 없어요"), h("span", null, "운영진이 공지를 올리면 여기에 가장 먼저 보여요.")));
@@ -449,20 +273,17 @@
     box.replaceChildren(...rows.map((p, i) => h("li", null,
       h("a", { href: GH.boardHref(p.board, p.id) },
         h("em", null, i + 1),
-        h("span", { style: "min-width:0" }, h("span", { class: "tt", style: "display:block" }, p.title), h("span", { class: "mt" }, (p.nick || "") + " · " + ago(p.created_at))),
-        h("span", { class: "bd" }, GH.boardName(p.board))))));
+        h("span", { style: "min-width:0" }, h("span", { class: "tt" }, p.title), h("span", { class: "mt" }, (p.nick || "") + " · " + ago(p.created_at))),
+        h("span", { class: "chip" }, GH.boardName(p.board))))));
   }
 
   /* ---------- 게시판 + 글 수 ---------- */
   function renderBoards() {
-    const make = (cls) => BOARDS.map((b, i) => h("a", { class: cls, href: b.href },
+    $("board-box").replaceChildren(...BOARDS.map((b, i) => h("a", { href: b.href },
       h("small", { class: "no" }, String(i + 1).padStart(2, "0")),
-      cls === "menu-link" ? b.name : h("span", { class: "nm" }, h("b", null, b.name), h("span", null, b.desc)),
-      cls === "menu-link" ? null : h("span", { class: "ct", "data-count": b.key }, ""),
-      cls === "menu-link" ? null : h("span", { class: "ar", "aria-hidden": "true" }, "→")));
-    $("board-box").replaceChildren(...make("blist-a"));
-    $("board-box").querySelectorAll("a").forEach((a) => a.removeAttribute("class"));
-    $("menu-boards").replaceChildren(...make("menu-link"));
+      h("span", { class: "nm" }, h("b", null, b.name), h("span", null, b.desc)),
+      h("span", { class: "ct", "data-count": b.key }, ""),
+      h("span", { class: "ar", "aria-hidden": "true" }, "→"))));
   }
   async function loadCounts() {
     const set = (k, n) => { const e = document.querySelector('[data-count="' + k + '"]'); if (e && n != null) e.textContent = "글 " + n.toLocaleString("ko-KR") + "개"; };
@@ -532,59 +353,7 @@
     if (!error && count != null) put(count);
   }
 
-  /* ---------- 검색 ---------- */
-  const layers = { search: $("search-layer"), menu: $("menu-layer") };
-  let lastFocus = null;
-  function openLayer(name) {
-    lastFocus = document.activeElement;
-    layers[name].classList.add("open");
-    document.documentElement.style.overflow = "hidden";
-    if (name === "search") setTimeout(() => $("q").focus(), 30);
-    else layers.menu.querySelector("[data-close]:not(.scrim)").focus();
-  }
-  function closeLayers() {
-    Object.values(layers).forEach((l) => l.classList.remove("open"));
-    document.documentElement.style.overflow = "";
-    if (lastFocus) lastFocus.focus();
-  }
-  document.querySelectorAll("[data-close]").forEach((e) => e.addEventListener("click", closeLayers));
-  $("open-search").onclick = () => openLayer("search");
-  $("tab-search").onclick = () => openLayer("search");
-  $("open-menu").onclick = () => openLayer("menu");
-  $("tab-boards").onclick = () => openLayer("menu");
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeLayers();
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openLayer("search"); }
-    if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); openLayer("search"); }
-  });
-
-  let timer = null, seq = 0;
-  async function runSearch(raw) {
-    const my = ++seq, t = raw.replace(/[%,()*\\"]/g, " ").trim(), box = $("sres");
-    if (t.length < 2) return box.replaceChildren(h("div", { class: "shint" }, "두 글자 이상 입력하세요."));
-    box.replaceChildren(h("div", { class: "shint" }, "찾는 중..."));
-    let rows = [];
-    if (DEMO) {
-      const hit = (x) => x.title.includes(t);
-      rows = [...D.notices.filter(hit).map((r) => ({ ...r, board: "notice" })), ...D.posts.filter(hit)];
-    } else {
-      const f = `title.ilike.%${t}%,content.ilike.%${t}%`;
-      const [p, n] = await Promise.all([
-        sb.from("posts").select("id,title,board,created_at").or(f).order("created_at", { ascending: false }).limit(30),
-        sb.from("notices").select("id,title,created_at").or(f).order("created_at", { ascending: false }).limit(10),
-      ]);
-      if (my !== seq) return;                         // 더 최신 검색이 있으면 버려요
-      if (p.error && n.error) return box.replaceChildren(h("div", { class: "shint" }, "검색하지 못했어요."));
-      rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || [])];
-    }
-    if (!rows.length) return box.replaceChildren(h("div", { class: "shint" }, "‘" + t + "’ 검색 결과가 없어요."));
-    box.replaceChildren(h("div", { class: "shint" }, rows.length + "건을 찾았어요."), ...rows.map((r) =>
-      h("a", { href: GH.boardHref(r.board, r.id) }, h("div", { class: "t" }, r.title), h("div", { class: "m" }, h("b", null, GH.boardName(r.board)), " · " + ago(r.created_at)))));
-  }
-  $("q").addEventListener("input", (e) => { clearTimeout(timer); timer = setTimeout(() => runSearch(e.target.value), 300); });
-
   $("logout").onclick = GH.signOut;
-  $("menu-logout").onclick = GH.signOut;
 </script>
 </body>
 </html>

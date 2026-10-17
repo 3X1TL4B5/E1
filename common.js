@@ -59,7 +59,7 @@
   const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
   function brand() {
     document.querySelectorAll("[data-site-name]").forEach((e) => { e.textContent = NAME; });
-    document.title = document.title ? NAME + " · " + document.title : NAME;
+    if (!document.title.startsWith(NAME)) document.title = document.title ? NAME + " · " + document.title : NAME;
   }
 
   /* ---------- Supabase 또는 미리보기 ---------- */
@@ -130,7 +130,7 @@
     DEMO, ICON, BOARDS, DEMO_DATA, h, ago,
     boardName: (k) => (BOARDS.find((b) => b.key === k) || {}).name || "",
     boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?b=" + k + (id ? "&id=" + id : "")),
-    theme: { current: currentTheme, set: setTheme },
+    theme: { current: currentTheme, set: setTheme, sync: syncTheme },
     sb() {
       if (DEMO) return null;
       if (!client) client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
