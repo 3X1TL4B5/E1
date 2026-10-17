@@ -151,7 +151,7 @@
     </section>
 
     <section class="tile t-recent" aria-label="최근 글">
-      <div class="tile-hd"><span class="lbl">최근 글</span><a class="more" href="board.html?b=free">게시판 →</a></div>
+      <div class="tile-hd"><span class="lbl">최근 글</span><a class="more" id="recent-more" href="main.html">게시판 →</a></div>
       <ol class="plist" id="recent-box"><li><div class="skel"></div></li><li><div class="skel" style="width:80%"></div></li><li><div class="skel" style="width:60%"></div></li></ol>
     </section>
 
@@ -225,11 +225,13 @@
     enterHome(n);
   });
 
-  function enterHome(nick) {
+  async function enterHome(nick) {
     myNick = nick;
     $("nick-view").classList.add("hidden");
     $("home-view").classList.remove("hidden");
+    await GH.loadBoards();
     E1Nav.init(sb, { active: "home", isAdmin });
+    $("recent-more").href = GH.firstBoardHref();
     $("today").textContent = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
     $("me-name").textContent = nick;
     const nn = $("me-nick"); nn.replaceChildren(nick);
@@ -265,9 +267,9 @@
     let rows;
     if (DEMO) rows = D.posts;
     else {
-      const { data, error } = await sb.from("posts").select("id,title,board,created_at,profiles(nickname)").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await sb.from("posts").select("id,title,category_id,created_at,profiles(nickname)").order("created_at", { ascending: false }).limit(5);
       if (error) return box.replaceChildren(h("li", { class: "empty" }, "글을 불러오지 못했어요."));
-      rows = data.map((p) => ({ ...p, nick: p.profiles ? p.profiles.nickname : "탈퇴한 회원" }));
+      rows = data.map((p) => ({ ...p, board: String(p.category_id), nick: p.profiles ? p.profiles.nickname : "탈퇴한 회원" }));
     }
     if (!rows.length) return box.replaceChildren(h("li", { class: "empty" }, "아직 글이 없어요. 첫 글을 써 보세요."));
     box.replaceChildren(...rows.map((p, i) => h("li", null,
@@ -291,7 +293,7 @@
     BOARDS.forEach(async (b) => {
       const q = b.key === "notice"
         ? sb.from("notices").select("id", { count: "exact", head: true })
-        : sb.from("posts").select("id", { count: "exact", head: true }).eq("board", b.key);
+        : sb.from("posts").select("id", { count: "exact", head: true }).eq("category_id", b.id);
       const { count, error } = await q;
       if (!error) set(b.key, count);
     });

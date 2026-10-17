@@ -55,10 +55,8 @@
   const sb = GH.sb();
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const key = params.get("b");
-  if (key === "notice") location.replace("notice.html");
-  const info = E1Nav.boards.find(b => b.key === key && b.key !== "notice");
-  if (!info) location.replace("main.html");
+  const key = params.get("c") || "";          // categories.id
+  let info = null;                             // GH.loadBoards() 뒤에 정해져요
   let user = null, isAdmin = false, adminIds = new Set(), currentPost = null;
 
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
@@ -71,10 +69,10 @@
   }
 
   async function loadPosts() {
-    history.replaceState(null, "", "board.html?b=" + key);
+    history.replaceState(null, "", "board.html?c=" + key);
     show("list");
     const box = $("posts"); box.replaceChildren();
-    const { data, error } = await sb.from("posts").select("id,title,created_at,author_id,profiles(nickname)").eq("board", key).order("created_at", { ascending: false }).limit(50);
+    const { data, error } = await sb.from("posts").select("id,title,created_at,author_id,profiles(nickname)").eq("category_id", info.id).order("created_at", { ascending: false }).limit(50);
     const note = (t) => { const d = document.createElement("div"); d.className = "empty"; d.textContent = t; box.appendChild(d); };
     if (error) return note("불러오지 못했어요: " + error.message);
     if (!data.length) return note("아직 글이 없어요. 첫 글을 써 보세요.");
@@ -88,10 +86,10 @@
   }
 
   async function openPost(id) {
-    const { data, error } = await sb.from("posts").select("id,title,content,created_at,author_id,board,profiles(nickname)").eq("id", id).single();
-    if (error || data.board !== key) { alert("글을 불러오지 못했어요."); return loadPosts(); }
+    const { data, error } = await sb.from("posts").select("id,title,content,created_at,author_id,category_id,profiles(nickname)").eq("id", id).single();
+    if (error || String(data.category_id) !== key) { alert("글을 불러오지 못했어요."); return loadPosts(); }
     currentPost = data;
-    history.replaceState(null, "", "board.html?b=" + key + "&id=" + id);
+    history.replaceState(null, "", "board.html?c=" + key + "&id=" + id);
     $("d-title").textContent = data.title;
     $("d-meta").replaceChildren(nameEl(data.profiles ? data.profiles.nickname : "탈퇴한 회원", data.author_id), " · " + fmt(data.created_at));
     $("d-body").textContent = data.content;
@@ -117,7 +115,7 @@
     msg.textContent = "";
     if (!title || !content) { msg.textContent = "제목과 내용을 입력해 주세요."; return; }
     btn.disabled = true;
-    const { error } = await sb.from("posts").insert({ title, content, board: key });
+    const { error } = await sb.from("posts").insert({ title, content, category_id: info.id });
     btn.disabled = false;
     if (error) { msg.textContent = (error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : "등록하지 못했어요: " + (error.message || error.code); return; }
     $("w-title").value = ""; $("w-content").value = "";
@@ -125,12 +123,14 @@
   });
 
   (async () => {
-    if (!info) return;
     const { data } = await sb.auth.getSession();
     if (!data.session) return location.replace("index.html");
     user = data.session.user;
     const p = await sb.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
     if (!p.data) return location.replace("main.html");
+    await GH.loadBoards();
+    info = E1Nav.boards.find(b => b.key === key && b.key !== "notice");
+    if (!info) return location.replace("main.html");      // 없는 게시판(예전 ?b= 주소 포함)이면 홈으로
     const a = await sb.from("admins").select("user_id");
     adminIds = new Set((a.data || []).map(r => r.user_id)); isAdmin = adminIds.has(user.id);
     E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: openWrite } });

@@ -3,9 +3,9 @@
    먼저 불러올 것: theme.css, app.css, config.js, common.js
 
    E1Nav.init(sb, {
-     active:  "home" | "notice" | "free" | "tips" | "qna" | "chat" | "admin",  // 지금 페이지 표시
+     active:  "home" | "notice" | 게시판 id(categories.id) | "chat" | "admin",  // 지금 페이지 표시
      isAdmin: true/false,                 // 메뉴에 '관리' 보이기
-     write:   { href, label } | { onClick, label } | false,   // 글쓰기 버튼 (기본: 자유게시판)
+     write:   { href, label } | { onClick, label } | false,   // 글쓰기 버튼 (기본: 첫 번째 게시판)
      tabbar:  true/false,                 // 휴대폰 하단 탭바 (기본 true, 채팅처럼 입력창이 아래에 있으면 false)
    }) */
 (function () {
@@ -13,19 +13,21 @@
   const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
   const ic = (name) => h("span", { class: "ic", html: ICON[name] });
 
-  const LINKS = [
+  // 상단 바로가기: 공지 + categories 테이블의 게시판(앞 4개) + 채팅
+  const makeLinks = () => [
     { key: "notice", label: "공지", href: "notice.html" },
-    { key: "free", label: "자유", href: "board.html?b=free" },
-    { key: "tips", label: "공략", href: "board.html?b=tips" },
-    { key: "qna", label: "질문", href: "board.html?b=qna" },
+    ...BOARDS.slice(1, 5).map((b) => ({ key: b.key, label: b.name, href: b.href })),
     { key: "chat", label: "채팅", href: "chat.html" },
   ];
 
-  function init(sb, opts) {
+  async function init(sb, opts) {
     opts = opts || {};
     if (document.querySelector("header.top")) return;
-    const active = opts.active || "";
-    const write = opts.write === false ? null : Object.assign({ href: "board.html?b=free", label: "글쓰기" }, opts.write || {});
+    await GH.loadBoards();
+    if (document.querySelector("header.top")) return;
+    const LINKS = makeLinks();
+    const active = String(opts.active || "");
+    const write = opts.write === false ? null : Object.assign({ href: GH.firstBoardHref(), label: "글쓰기" }, opts.write || {});
     const signOut = () => GH.signOut();
 
     /* ----- 상단바 ----- */
@@ -77,11 +79,11 @@
 
     /* ----- 휴대폰 탭바 ----- */
     if (opts.tabbar !== false) {
-      const tabBoards = h("button", { type: "button", class: ["free", "tips", "qna", "notice"].includes(active) ? "on" : null }, ic("list"), "게시판");
+      const tabBoards = h("button", { type: "button", class: BOARDS.some((b) => b.key === active) ? "on" : null }, ic("list"), "게시판");
       const tabSearch = h("button", { type: "button" }, ic("search"), "검색");
       let tabWrite;
       if (write && write.onClick) { tabWrite = h("button", { type: "button", class: "plus", "aria-label": write.label }, ic("pen"), write.label); tabWrite.addEventListener("click", write.onClick); }
-      else tabWrite = h("a", { class: "plus", href: write ? write.href : "board.html?b=free", "aria-label": "글쓰기" }, ic("pen"), "글쓰기");
+      else tabWrite = h("a", { class: "plus", href: write ? write.href : GH.firstBoardHref(), "aria-label": "글쓰기" }, ic("pen"), "글쓰기");
       const bar = h("nav", { class: "tabbar", "aria-label": "빠른 이동" },
         h("a", { href: "main.html", class: active === "home" ? "on" : null }, ic("home"), "홈"),
         tabBoards, tabWrite,
@@ -128,12 +130,12 @@
       } else {
         const f = `title.ilike.%${t}%,content.ilike.%${t}%`;
         const [p, n] = await Promise.all([
-          sb.from("posts").select("id,title,board,created_at").or(f).order("created_at", { ascending: false }).limit(30),
+          sb.from("posts").select("id,title,category_id,created_at").or(f).order("created_at", { ascending: false }).limit(30),
           sb.from("notices").select("id,title,created_at").or(f).order("created_at", { ascending: false }).limit(10),
         ]);
         if (my !== seq) return;                         // 더 최신 검색이 있으면 버려요
         if (p.error && n.error) return sres.replaceChildren(h("div", { class: "shint" }, "검색하지 못했어요."));
-        rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || [])];
+        rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || []).map((r) => ({ ...r, board: String(r.category_id) }))];
       }
       if (!rows.length) return sres.replaceChildren(h("div", { class: "shint" }, "‘" + t + "’ 검색 결과가 없어요."));
       sres.replaceChildren(h("div", { class: "shint" }, rows.length + "건을 찾았어요."), ...rows.map((r) =>

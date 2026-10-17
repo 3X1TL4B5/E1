@@ -40,7 +40,7 @@ PC(960px 이상 4열), 태블릿(700~959px), 휴대폰(699px 이하, 하단 탭�
 - 로고 이미지는 쓰지 않아요. 로고 자리는 `config.js`의 `SITE_NAME` 글자예요.
 - 사용자가 쓴 글은 항상 `textContent`(또는 `GH.h()`)로 넣어요. `innerHTML`에 넣지 않아요.
 - Supabase 클라이언트는 `GH.sb()`, 로그인 확인은 `GH.session()`, 로그아웃은 `GH.signOut()`.
-- 게시판 목록은 `common.js`의 `BOARDS` 한 곳에서 관리해요.
+- 게시판 목록은 Supabase `categories` 테이블에서 읽어요. 페이지에서 `await GH.loadBoards()` 뒤에 `GH.BOARDS`(맨 앞은 고정 공지사항)를 써요. 게시판 주소는 `board.html?c=<categories.id>`.
 
 ## 테이블 (Supabase)
-`posts`(id, title, content, board, created_at, author_id) · `notices`(id, title, content, pinned, created_at, updated_at) · `messages`(id, author_id, content, created_at) · `profiles`(id, nickname) · `admins`(user_id) · `banned_users` · `invite_links` · `boards` · `reserved_nicknames`
+`posts`(id, title, content, category_id → categories.id, created_at, author_id) · `categories`(id, name, created_at) · `notices`(id, title, content, pinned, created_at, updated_at) · `messages`(id, author_id, content, created_at) · `profiles`(id, nickname) · `admins`(user_id) · `banned_users` · `invite_links` · `boards` · `reserved_nicknames`

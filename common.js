@@ -66,12 +66,25 @@
   const DEMO = typeof SUPABASE_URL === "undefined" || /YOUR-PROJECT/.test(SUPABASE_URL);
   let client = null;
 
-  const BOARDS = [
-    { key: "notice", name: "공지사항", desc: "운영 소식과 안내", href: "notice.html" },
-    { key: "free", name: "자유게시판", desc: "자유롭게 이야기해요", href: "board.html?b=free" },
-    { key: "tips", name: "공략/팁", desc: "노하우를 나눠요", href: "board.html?b=tips" },
-    { key: "qna", name: "질문/답변", desc: "궁금한 건 여기서 물어보세요", href: "board.html?b=qna" },
-  ];
+  /* 게시판 목록: 공지사항(notices 테이블)은 고정, 나머지는 Supabase categories 테이블에서 읽어요.
+     글(posts)은 category_id 로 게시판을 구분해요. 페이지에서 GH.loadBoards() 를 먼저 불러야 채워져요. */
+  const NOTICE = { key: "notice", name: "공지사항", desc: "운영 소식과 안내", href: "notice.html" };
+  const BOARDS = [NOTICE];
+  const DEMO_CATS = [{ id: 1, name: "자유게시판" }, { id: 2, name: "공략/팁" }, { id: 3, name: "질문/답변" }];
+  const catBoard = (c) => ({ key: String(c.id), id: c.id, name: c.name, desc: "", href: "board.html?c=" + c.id });
+  let boardsLoaded = null;
+  function loadBoards() {
+    if (!boardsLoaded) boardsLoaded = (async () => {
+      let cats = DEMO_CATS;
+      if (!DEMO) {
+        const { data, error } = await GH.sb().from("categories").select("id,name").order("id");
+        cats = error ? [] : data || [];
+      }
+      BOARDS.splice(1, BOARDS.length, ...cats.map(catBoard));
+      return BOARDS;
+    })();
+    return boardsLoaded;
+  }
 
   function ago(iso) {
     const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -110,13 +123,13 @@
       { id: 3, title: "커뮤니티 이용 규칙이 바뀌었어요", pinned: false, created_at: m(60 * 72) },
     ],
     posts: [
-      { id: 11, board: "tips", title: "심연의 탑 3관문 파티 구성 정리", created_at: m(12), nick: "달토끼" },
-      { id: 12, board: "free", title: "이번 패치 궁수 너프 체감 후기", created_at: m(48), nick: "모닥불" },
-      { id: 13, board: "qna", title: "30레벨 이후 사냥터 어디가 좋아요?", created_at: m(95), nick: "초보농부" },
-      { id: 14, board: "tips", title: "골드 시세 정리 (10월 3주)", created_at: m(60 * 4), nick: "시세봇" },
-      { id: 15, board: "free", title: "어제 길드전 다시보기 링크 모음", created_at: m(60 * 9), nick: "새벽코어" },
+      { id: 11, board: "2", title: "심연의 탑 3관문 파티 구성 정리", created_at: m(12), nick: "달토끼" },
+      { id: 12, board: "1", title: "이번 패치 궁수 너프 체감 후기", created_at: m(48), nick: "모닥불" },
+      { id: 13, board: "3", title: "30레벨 이후 사냥터 어디가 좋아요?", created_at: m(95), nick: "초보농부" },
+      { id: 14, board: "2", title: "골드 시세 정리 (10월 3주)", created_at: m(60 * 4), nick: "시세봇" },
+      { id: 15, board: "1", title: "어제 길드전 다시보기 링크 모음", created_at: m(60 * 9), nick: "새벽코어" },
     ],
-    counts: { notice: 3, free: 128, tips: 46, qna: 72 },
+    counts: { notice: 3, 1: 128, 2: 46, 3: 72 },
     messages: [
       { id: 101, nick: "달토끼", content: "오늘 레이드 9시 맞죠?", created_at: m(3) },
       { id: 102, nick: "운영진", content: "네, 9시에 길드 채널에서 모여요", created_at: m(2) },
@@ -127,9 +140,10 @@
   };
 
   window.GH = {
-    DEMO, ICON, BOARDS, DEMO_DATA, h, ago,
-    boardName: (k) => (BOARDS.find((b) => b.key === k) || {}).name || "",
-    boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?b=" + k + (id ? "&id=" + id : "")),
+    DEMO, ICON, BOARDS, DEMO_DATA, h, ago, loadBoards,
+    boardName: (k) => (BOARDS.find((b) => b.key === String(k)) || {}).name || "",
+    boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?c=" + k + (id ? "&id=" + id : "")),
+    firstBoardHref: () => (BOARDS[1] ? BOARDS[1].href : "main.html"),
     theme: { current: currentTheme, set: setTheme, sync: syncTheme },
     sb() {
       if (DEMO) return null;
