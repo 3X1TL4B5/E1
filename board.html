@@ -36,6 +36,21 @@
   #c-form textarea { min-height: 48px; height: 48px; resize: vertical; flex: 1; min-width: 0; }
   #c-form .primary { flex: none; height: 48px; }
   .c-empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+
+  /* 이미지 첨부 */
+  .img-pick { display: flex; flex-direction: column; gap: 10px; }
+  .img-pick-hd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .img-pick-hd label { cursor: pointer; }
+  .img-pick-hd .ic svg { width: 18px; height: 18px; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .thumb { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .6); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; }
+  .thumb .sz { position: absolute; left: 4px; bottom: 4px; font-size: 10px; padding: 1px 6px; border-radius: 6px; background: rgba(0, 0, 0, .6); color: #fff; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; max-width: 900px; }
+  .gallery a { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); aspect-ratio: 4 / 3; max-width: 100%; }
+  .gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .list-item .pic { flex: none; font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -54,6 +69,14 @@
       <form id="write-form">
         <input id="w-title" placeholder="제목" maxlength="100" required>
         <textarea id="w-content" placeholder="내용" maxlength="5000" required></textarea>
+        <div class="img-pick hidden" id="w-images">
+          <div class="img-pick-hd">
+            <label class="ghost" for="w-file"><span class="ic" data-icon="image"></span>이미지 추가</label>
+            <input id="w-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+            <span class="hint" id="w-img-hint"></span>
+          </div>
+          <div class="thumbs" id="w-thumbs"></div>
+        </div>
         <div class="row">
           <button class="ghost" type="button" id="w-cancel">취소</button>
           <button class="primary" id="w-btn" type="submit">등록</button>
@@ -69,6 +92,7 @@
       <h2 id="d-title"></h2>
       <div class="m" id="d-meta"></div>
       <div class="body" id="d-body"></div>
+      <div class="gallery hidden" id="d-images"></div>
       <div class="row">
         <button class="ghost hidden" id="d-edit" type="button">수정</button>
         <button class="ghost danger hidden" id="d-del" type="button">삭제</button>
@@ -91,6 +115,7 @@
 <script src="nav.js"></script>
 <script>
   const sb = GH.sb();
+  const { IMG } = GH;
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const key = params.get("b") || "";          // boards.id
@@ -98,13 +123,18 @@
   let info = null;                             // GH.loadBoards() 뒤에 정해져요
   let user = null, isAdmin = false, adminIds = new Set(), currentPost = null, editingId = null, page = 0;
   let isLocked = () => false;                  // 증거 보관 잠금 (GH.lockCheck)
+  let picks = [];                              // 글쓰기 이미지: { path } 이미 올린 것 | { blob, url } 새로 고른 것
   const lockedMine = (row) => row.author_id === user.id && !isAdmin && isLocked(row.created_at);
+  const imgOn = () => info && info.imageRule !== "off";
+  const imgRequired = () => info && info.imageRule === "required";
 
+  document.querySelectorAll("[data-icon]").forEach((e) => { e.innerHTML = GH.ICON[e.dataset.icon]; });
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
   const fmtTime = (s) => new Date(s).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
   const show = (n) => ["list", "write", "detail"].forEach(v => $(v + "-view").classList.toggle("hidden", v !== n));
   const nickOf = (row) => (row.profiles ? row.profiles.nickname : "탈퇴한 회원");
   const rlsMsg = (error, fallback) => (error.message || "").includes("row-level security") ? "이용이 제한된 계정이에요." : fallback + ": " + (error.message || error.code);
+  const mb = (n) => (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + "MB";
   function nameEl(nick, id) {
     const w = document.createElement("span"), s = document.createElement("span");
     s.textContent = nick; w.appendChild(s);
@@ -120,8 +150,8 @@
       show("list"); page = 0; box.replaceChildren(); $("more").classList.add("hidden");
     }
     const from = page * PAGE;
-    const { data, error } = await sb.from("posts")
-      .select("id,title,created_at,author_id,profiles(nickname),comments(count)")
+    const cols = "id,title,created_at,author_id,profiles(nickname),comments(count)" + (imgOn() ? ",images" : "");
+    const { data, error } = await sb.from("posts").select(cols)
       .eq("board_id", info.id).order("created_at", { ascending: false }).range(from, from + PAGE - 1);
     const note = (t) => { const d = document.createElement("div"); d.className = "empty"; d.textContent = t; box.appendChild(d); };
     if (error) return note("불러오지 못했어요: " + error.message);
@@ -130,6 +160,7 @@
       const b = document.createElement("button"); b.className = "list-item"; b.type = "button";
       const t = document.createElement("div"); t.className = "t";
       const tt = document.createElement("span"); tt.className = "tt"; tt.textContent = p.title; t.appendChild(tt);
+      if (p.images && p.images.length) { const pi = document.createElement("span"); pi.className = "pic"; pi.textContent = "사진 " + p.images.length; t.appendChild(pi); }
       const n = p.comments && p.comments[0] ? p.comments[0].count : 0;
       if (n) { const c = document.createElement("span"); c.className = "cc"; c.textContent = "[" + n + "]"; c.title = "댓글 " + n + "개"; t.appendChild(c); }
       const m = document.createElement("div"); m.className = "m";
@@ -140,9 +171,18 @@
   }
   $("more").onclick = async () => { const b = $("more"); b.disabled = true; page++; await loadPosts(false); b.disabled = false; };
 
+  /* ---------- 이미지: 보기용 임시 주소 (회원만 볼 수 있는 저장소라 1시간짜리 주소를 받아요) ---------- */
+  async function signedUrls(paths) {
+    if (!paths || !paths.length) return [];
+    const { data, error } = await sb.storage.from(IMG.BUCKET).createSignedUrls(paths, 3600);
+    if (error || !data) return [];
+    return data.map((d) => d.signedUrl).filter(Boolean);
+  }
+
   /* ---------- 글 보기 ---------- */
   async function openPost(id) {
-    const { data, error } = await sb.from("posts").select("id,title,content,created_at,updated_at,author_id,board_id,profiles(nickname)").eq("id", id).single();
+    const cols = "id,title,content,created_at,updated_at,author_id,board_id,profiles(nickname)" + (imgOn() ? ",images" : "");
+    const { data, error } = await sb.from("posts").select(cols).eq("id", id).single();
     if (error || String(data.board_id) !== key) { alert("글을 불러오지 못했어요."); return loadPosts(); }
     currentPost = data;
     history.replaceState(null, "", "board.html?b=" + key + "&id=" + id);
@@ -151,6 +191,17 @@
     if (data.updated_at) meta.push(" · 수정됨");
     $("d-meta").replaceChildren(...meta);
     $("d-body").textContent = data.content;
+    const gal = $("d-images"); gal.replaceChildren(); gal.classList.toggle("hidden", !(data.images && data.images.length));
+    if (data.images && data.images.length) {
+      signedUrls(data.images).then((urls) => {
+        if (!currentPost || currentPost.id !== data.id) return;
+        gal.replaceChildren(...urls.map((u, i) => {
+          const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.rel = "noopener";
+          const im = document.createElement("img"); im.src = u; im.alt = "첨부 이미지 " + (i + 1); im.loading = "lazy";
+          a.appendChild(im); return a;
+        }));
+      });
+    }
     const mine = data.author_id === user.id, locked = lockedMine(data);
     $("d-edit").classList.toggle("hidden", !mine || locked);
     $("d-del").classList.toggle("hidden", (!mine && !isAdmin) || locked);
@@ -203,14 +254,55 @@
   // Ctrl+Enter 로 댓글 등록
   $("c-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("c-form").requestSubmit(); });
 
+  /* ---------- 글쓰기 이미지 고르기 ---------- */
+  function imgHint() {
+    const base = (imgRequired() ? "이미지를 1장 이상 올려야 등록돼요. " : "") + "최대 " + IMG.MAX_COUNT + "장, 1장 " + mb(IMG.MAX_BYTES) + "까지 (큰 사진은 자동으로 줄여요)";
+    $("w-img-hint").textContent = base + " · " + picks.length + "/" + IMG.MAX_COUNT;
+  }
+  function drawPicks() {
+    $("w-thumbs").replaceChildren(...picks.map((p, i) => {
+      const box = document.createElement("div"); box.className = "thumb";
+      const im = document.createElement("img"); im.alt = "선택한 이미지 " + (i + 1); im.src = p.url || ""; box.appendChild(im);
+      if (p.blob) { const s = document.createElement("span"); s.className = "sz"; s.textContent = mb(p.blob.size); box.appendChild(s); }
+      const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "이미지 " + (i + 1) + " 빼기");
+      x.onclick = () => { if (p.blob && p.url) URL.revokeObjectURL(p.url); picks.splice(i, 1); drawPicks(); };
+      box.appendChild(x); return box;
+    }));
+    imgHint();
+  }
+  $("w-file").addEventListener("change", async (e) => {
+    const files = [...e.target.files]; e.target.value = "";
+    const msg = $("w-msg"); msg.textContent = "";
+    for (const f of files) {
+      if (picks.length >= IMG.MAX_COUNT) { msg.textContent = "이미지는 최대 " + IMG.MAX_COUNT + "장까지 올릴 수 있어요."; break; }
+      if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { msg.textContent = "jpg, png, webp, gif 이미지만 올릴 수 있어요."; continue; }
+      const blob = await GH.shrinkImage(f);
+      if (blob.size > IMG.MAX_BYTES) { msg.textContent = "‘" + f.name + "’은(는) 줄여도 " + mb(blob.size) + "라서 올릴 수 없어요. (최대 " + mb(IMG.MAX_BYTES) + ")"; continue; }
+      picks.push({ blob, url: URL.createObjectURL(blob) });
+    }
+    drawPicks();
+  });
+
   /* ---------- 글쓰기 · 수정 ---------- */
-  function openWrite(post) {
+  async function openWrite(post) {
     editingId = post && post.id ? post.id : null;
     $("w-name").textContent = editingId ? "글 수정" : info.name + " 글쓰기";
     $("w-btn").textContent = editingId ? "수정" : "등록";
     $("w-title").value = editingId ? post.title : "";
     $("w-content").value = editingId ? post.content : "";
+    picks.forEach((p) => p.blob && p.url && URL.revokeObjectURL(p.url));
+    picks = [];
+    $("w-images").classList.toggle("hidden", !imgOn());
+    if (imgOn() && editingId && post.images && post.images.length) {
+      const urls = await signedUrls(post.images);
+      picks = post.images.map((path, i) => ({ path, url: urls[i] }));
+    }
+    if (imgOn()) drawPicks();
     $("w-msg").textContent = ""; show("write"); window.scrollTo(0, 0); $("w-title").focus();
+  }
+
+  async function removeFiles(paths) {
+    if (paths.length) await sb.storage.from(IMG.BUCKET).remove(paths);
   }
 
   $("back").onclick = () => loadPosts();
@@ -220,6 +312,7 @@
     const { data, error } = await sb.from("posts").delete().eq("id", currentPost.id).select("id");
     if (error) return alert("삭제하지 못했어요.");
     if (!data || !data.length) return alert(GH.LOCK_MSG);         // 보안 규칙이 막으면 0건
+    removeFiles(currentPost.images || []);                         // 첨부 이미지도 정리
     loadPosts();
   };
   $("w-cancel").onclick = () => (editingId ? openPost(editingId) : loadPosts());
@@ -230,18 +323,53 @@
     const title = $("w-title").value.trim(), content = $("w-content").value.trim();
     msg.textContent = "";
     if (!title || !content) { msg.textContent = "제목과 내용을 입력해 주세요."; return; }
+    if (imgRequired() && !picks.length) { msg.textContent = "이 게시판은 이미지를 1장 이상 올려야 등록할 수 있어요."; return; }
     btn.disabled = true;
+    const label = btn.textContent;
+
+    // 1) 새로 고른 이미지 올리기 (내 폴더: <회원 ID>/<시각>-<무작위>.<확장자>)
+    const uploaded = [];
+    if (imgOn()) {
+      for (let i = 0; i < picks.length; i++) {
+        const p = picks[i];
+        if (p.path) continue;
+        btn.textContent = "이미지 올리는 중 " + (i + 1) + "/" + picks.length;
+        const ext = { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif" }[p.blob.type] || "jpg";
+        const path = user.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+        const { error } = await sb.storage.from(IMG.BUCKET).upload(path, p.blob, { contentType: p.blob.type, upsert: false });
+        if (error) {
+          await removeFiles(uploaded);
+          btn.disabled = false; btn.textContent = label;
+          msg.textContent = /row-level security|Unauthorized|403/i.test(error.message || "") ? "이용이 제한된 계정이에요." : "이미지를 올리지 못했어요: " + error.message;
+          return;
+        }
+        p.path = path; uploaded.push(path);
+      }
+    }
+    const images = picks.map((p) => p.path);
+    btn.textContent = label;
+
+    // 2) 글 저장
     let error;
+    const row = { title, content };
+    if (imgOn()) row.images = images;
     if (editingId) {
-      const r = await sb.from("posts").update({ title, content, updated_at: new Date().toISOString() }).eq("id", editingId).select("id");
+      const before = (currentPost && currentPost.images) || [];
+      const r = await sb.from("posts").update({ ...row, updated_at: new Date().toISOString() }).eq("id", editingId).select("id");
       error = r.error || (!r.data || !r.data.length ? { message: "locked" } : null);   // 0건 = 내 글이 아니거나 보관 중
-      if (error && error.message === "locked") { btn.disabled = false; msg.textContent = GH.LOCK_MSG; return; }
+      if (!error) removeFiles(before.filter((p) => !images.includes(p)));           // 뺀 이미지는 저장소에서도 지움
     } else {
-      ({ error } = await sb.from("posts").insert({ title, content, board_id: info.id }));
+      ({ error } = await sb.from("posts").insert({ ...row, board_id: info.id }));
     }
     btn.disabled = false;
-    if (error) { msg.textContent = rlsMsg(error, editingId ? "수정하지 못했어요" : "등록하지 못했어요"); return; }
+    if (error) {
+      await removeFiles(uploaded);                                // 글이 저장 안 됐으면 방금 올린 이미지도 지움
+      picks.forEach((p) => { if (uploaded.includes(p.path)) delete p.path; });
+      msg.textContent = error.message === "locked" ? GH.LOCK_MSG : rlsMsg(error, editingId ? "수정하지 못했어요" : "등록하지 못했어요");
+      return;
+    }
     $("w-title").value = ""; $("w-content").value = "";
+    picks.forEach((p) => p.blob && p.url && URL.revokeObjectURL(p.url)); picks = [];
     if (editingId) { const id = editingId; editingId = null; openPost(id); } else loadPosts();
   });
 
@@ -260,7 +388,7 @@
     isLocked = await GH.lockCheck(sb);
     E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: () => openWrite(null) } });
     $("b-name").textContent = info.name;
-    $("b-desc").textContent = info.desc; document.title = (typeof SITE_NAME === "string" ? SITE_NAME : "E1") + " · " + info.name;
+    $("b-desc").textContent = info.desc + (imgRequired() ? " · 이미지 1장 이상 필수" : ""); document.title = (typeof SITE_NAME === "string" ? SITE_NAME : "E1") + " · " + info.name;
     const id = params.get("id");
     if (id) openPost(id); else loadPosts();
   })();

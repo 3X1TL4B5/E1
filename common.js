@@ -39,6 +39,7 @@
     bulb: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>',
     help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></svg>',
     doc: '<svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>',
+    image: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>',
   };
 
   function syncTheme() {
@@ -80,9 +81,10 @@
   const DEMO_BOARDS = [
     { id: 1, name: "자유게시판", description: "자유롭게 이야기해요", parent_id: null, position: 0 },
     { id: 2, name: "공략/팁", description: "노하우를 나눠요", parent_id: null, position: 1 },
-    { id: 3, name: "질문/답변", description: "궁금한 건 여기서 물어보세요", parent_id: null, position: 2 },
+    { id: 3, name: "질문/답변", description: "궁금한 건 여기서 물어보세요", parent_id: null, position: 2, image_rule: "required" },
   ];
-  const toBoard = (b) => ({ key: String(b.id), id: b.id, name: b.name, desc: b.description || "", href: "board.html?b=" + b.id });
+  // imageRule: off(첨부 없음) / optional(선택) / required(1장 이상) — boards.image_rule (7단계 SQL)
+  const toBoard = (b) => ({ key: String(b.id), id: b.id, name: b.name, desc: b.description || "", href: "board.html?b=" + b.id, imageRule: b.image_rule || "off" });
   function ordered(rows) {
     const top = rows.filter((b) => !b.parent_id);
     return top.flatMap((t) => [t, ...rows.filter((b) => b.parent_id === t.id)]);
@@ -92,7 +94,8 @@
     if (!boardsLoaded) boardsLoaded = (async () => {
       let rows = DEMO_BOARDS;
       if (!DEMO) {
-        const { data, error } = await GH.sb().from("boards").select("id,name,description,parent_id,position").order("position").order("id");
+        // "*" : 나중에 칸이 추가돼도(예: image_rule) 그 전 데이터베이스에서 깨지지 않게
+        const { data, error } = await GH.sb().from("boards").select("*").order("position").order("id");
         rows = error ? [] : data || [];
       }
       BOARDS.splice(1, BOARDS.length, ...ordered(rows).map(toBoard));
@@ -170,6 +173,23 @@
       return (created) => new Date(created).getTime() <= cut;
     },
     LOCK_MSG: "보관 중인 내용이라 수정하거나 지울 수 없어요.",
+
+    /* 게시글 이미지 (7단계 SQL: post-images 저장소) */
+    IMG: { BUCKET: "post-images", MAX_COUNT: 5, MAX_BYTES: 5 * 1024 * 1024, MAX_SIDE: 1920 },
+    /* 올리기 전에 긴 변 1920px로 줄이고 압축 (gif는 움직임 유지를 위해 그대로) */
+    async shrinkImage(file) {
+      if (file.type === "image/gif") return file;
+      let bmp;
+      try { bmp = await createImageBitmap(file); } catch (e) { return file; }
+      const scale = Math.min(1, GH.IMG.MAX_SIDE / Math.max(bmp.width, bmp.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+      const enc = (type, q) => new Promise((r) => c.toBlob(r, type, q));
+      let out = await enc("image/webp", 0.85);
+      if (!out || out.type !== "image/webp") out = await enc("image/jpeg", 0.85);   // webp 못 만드는 브라우저
+      return out && out.size < file.size ? out : file;
+    },
 
     /* 자동 로그아웃: 활동이 없으면 IDLE_MIN 분 뒤 로그아웃 (관리자는 nav.js에서 제외)
        - 여러 탭이 같은 기록(localStorage)을 써서, 한 탭에서 활동하면 다른 탭도 유지돼요.
