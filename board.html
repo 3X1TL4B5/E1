@@ -73,6 +73,7 @@
         <button class="ghost hidden" id="d-edit" type="button">수정</button>
         <button class="ghost danger hidden" id="d-del" type="button">삭제</button>
       </div>
+      <p class="hint hidden" id="d-lock">운영 정책에 따라 보관 중인 글이라 수정하거나 지울 수 없어요.</p>
     </section>
     <section class="tile" aria-label="댓글">
       <div class="c-head"><h3>댓글</h3><span id="c-count">0</span></div>
@@ -96,6 +97,8 @@
   const PAGE = 30;                             // 한 번에 불러오는 글 수
   let info = null;                             // GH.loadBoards() 뒤에 정해져요
   let user = null, isAdmin = false, adminIds = new Set(), currentPost = null, editingId = null, page = 0;
+  let isLocked = () => false;                  // 증거 보관 잠금 (GH.lockCheck)
+  const lockedMine = (row) => row.author_id === user.id && !isAdmin && isLocked(row.created_at);
 
   const fmt = (s) => new Date(s).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" });
   const fmtTime = (s) => new Date(s).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -148,9 +151,10 @@
     if (data.updated_at) meta.push(" · 수정됨");
     $("d-meta").replaceChildren(...meta);
     $("d-body").textContent = data.content;
-    const mine = data.author_id === user.id;
-    $("d-edit").classList.toggle("hidden", !mine);
-    $("d-del").classList.toggle("hidden", !mine && !isAdmin);
+    const mine = data.author_id === user.id, locked = lockedMine(data);
+    $("d-edit").classList.toggle("hidden", !mine || locked);
+    $("d-del").classList.toggle("hidden", (!mine && !isAdmin) || locked);
+    $("d-lock").classList.toggle("hidden", !locked);
     $("c-msg").textContent = ""; $("c-text").value = "";
     show("detail"); window.scrollTo(0, 0);
     loadComments();
@@ -169,12 +173,13 @@
       const meta = document.createElement("div"); meta.className = "c-meta";
       const who = document.createElement("b"); who.appendChild(nameEl(nickOf(c), c.author_id));
       meta.append(who, fmtTime(c.created_at));
-      if (c.author_id === user.id || isAdmin) {
+      if ((c.author_id === user.id || isAdmin) && !lockedMine(c)) {
         const del = document.createElement("button"); del.type = "button"; del.textContent = "삭제";
         del.onclick = async () => {
           if (!confirm("이 댓글을 삭제할까요?")) return;
-          const { error } = await sb.from("comments").delete().eq("id", c.id);
+          const { data, error } = await sb.from("comments").delete().eq("id", c.id).select("id");
           if (error) return alert("삭제하지 못했어요.");
+          if (!data || !data.length) return alert(GH.LOCK_MSG);     // 보안 규칙이 막으면 0건
           loadComments();
         };
         meta.appendChild(del);
@@ -212,8 +217,9 @@
   $("d-edit").onclick = () => openWrite(currentPost);
   $("d-del").onclick = async () => {
     if (!confirm("이 글을 삭제할까요?")) return;
-    const { error } = await sb.from("posts").delete().eq("id", currentPost.id);
+    const { data, error } = await sb.from("posts").delete().eq("id", currentPost.id).select("id");
     if (error) return alert("삭제하지 못했어요.");
+    if (!data || !data.length) return alert(GH.LOCK_MSG);         // 보안 규칙이 막으면 0건
     loadPosts();
   };
   $("w-cancel").onclick = () => (editingId ? openPost(editingId) : loadPosts());
@@ -228,7 +234,8 @@
     let error;
     if (editingId) {
       const r = await sb.from("posts").update({ title, content, updated_at: new Date().toISOString() }).eq("id", editingId).select("id");
-      error = r.error || (!r.data || !r.data.length ? { message: "row-level security" } : null);   // 0건 = 내 글이 아님
+      error = r.error || (!r.data || !r.data.length ? { message: "locked" } : null);   // 0건 = 내 글이 아니거나 보관 중
+      if (error && error.message === "locked") { btn.disabled = false; msg.textContent = GH.LOCK_MSG; return; }
     } else {
       ({ error } = await sb.from("posts").insert({ title, content, board_id: info.id }));
     }
@@ -250,6 +257,7 @@
     if (!info) return location.replace("main.html");      // 없는 게시판이면 홈으로
     const a = await sb.from("admins").select("user_id");
     adminIds = new Set((a.data || []).map(r => r.user_id)); isAdmin = adminIds.has(user.id);
+    isLocked = await GH.lockCheck(sb);
     E1Nav.init(sb, { active: key, isAdmin, write: { label: "글쓰기", onClick: () => openWrite(null) } });
     $("b-name").textContent = info.name;
     $("b-desc").textContent = info.desc; document.title = (typeof SITE_NAME === "string" ? SITE_NAME : "E1") + " · " + info.name;

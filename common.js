@@ -159,6 +159,17 @@
     boardName: (k) => (BOARDS.find((b) => b.key === String(k)) || {}).name || "",
     boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?b=" + k + (id ? "&id=" + id : "")),
     firstBoardHref: () => (BOARDS[1] ? BOARDS[1].href : "main.html"),
+    /* 증거 보관 잠금: 차단 중이거나 차단이 풀리기 전에 쓴 내 글·댓글·채팅은 수정·삭제 불가 (5단계 SQL)
+       GH.lockCheck(sb) → (created_at) => 잠겼으면 true. 관리자는 페이지에서 따로 예외 처리해요. */
+    async lockCheck(sb) {
+      if (DEMO) return () => false;
+      const { data, error } = await sb.rpc("my_lock_before");
+      if (error || !data) return () => false;
+      if (String(data).includes("infinity")) return () => true;
+      const cut = new Date(data).getTime();
+      return (created) => new Date(created).getTime() <= cut;
+    },
+    LOCK_MSG: "보관 중인 내용이라 수정하거나 지울 수 없어요.",
     /* 게시판 이름으로 아이콘 고르기 (관리에서 새 게시판을 만들면 이름에 맞춰 자동으로 골라요) */
     boardIcon: (b) => {
       const n = (b && b.name) || "";
