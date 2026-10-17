@@ -267,9 +267,9 @@
     let rows;
     if (DEMO) rows = D.posts;
     else {
-      const { data, error } = await sb.from("posts").select("id,title,category_id,created_at,profiles(nickname)").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await sb.from("posts").select("id,title,board_id,created_at,profiles(nickname)").order("created_at", { ascending: false }).limit(5);
       if (error) return box.replaceChildren(h("li", { class: "empty" }, "글을 불러오지 못했어요."));
-      rows = data.map((p) => ({ ...p, board: String(p.category_id), nick: p.profiles ? p.profiles.nickname : "탈퇴한 회원" }));
+      rows = data.map((p) => ({ ...p, board: String(p.board_id), nick: p.profiles ? p.profiles.nickname : "탈퇴한 회원" }));
     }
     if (!rows.length) return box.replaceChildren(h("li", { class: "empty" }, "아직 글이 없어요. 첫 글을 써 보세요."));
     box.replaceChildren(...rows.map((p, i) => h("li", null,
@@ -293,7 +293,7 @@
     BOARDS.forEach(async (b) => {
       const q = b.key === "notice"
         ? sb.from("notices").select("id", { count: "exact", head: true })
-        : sb.from("posts").select("id", { count: "exact", head: true }).eq("category_id", b.id);
+        : sb.from("posts").select("id", { count: "exact", head: true }).eq("board_id", b.id);
       const { count, error } = await q;
       if (!error) set(b.key, count);
     });

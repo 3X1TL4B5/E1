@@ -3,7 +3,7 @@
    먼저 불러올 것: theme.css, app.css, config.js, common.js
 
    E1Nav.init(sb, {
-     active:  "home" | "notice" | 게시판 id(categories.id) | "chat" | "admin",  // 지금 페이지 표시
+     active:  "home" | "notice" | 게시판 id(boards.id) | "chat" | "admin",  // 지금 페이지 표시
      isAdmin: true/false,                 // 메뉴에 '관리' 보이기
      write:   { href, label } | { onClick, label } | false,   // 글쓰기 버튼 (기본: 첫 번째 게시판)
      tabbar:  true/false,                 // 휴대폰 하단 탭바 (기본 true, 채팅처럼 입력창이 아래에 있으면 false)
@@ -13,7 +13,7 @@
   const NAME = typeof SITE_NAME === "string" ? SITE_NAME : "E1";
   const ic = (name) => h("span", { class: "ic", html: ICON[name] });
 
-  // 상단 바로가기: 공지 + categories 테이블의 게시판(앞 4개) + 채팅
+  // 상단 바로가기: 공지 + boards 테이블의 게시판(앞 4개) + 채팅
   const makeLinks = () => [
     { key: "notice", label: "공지", href: "notice.html" },
     ...BOARDS.slice(1, 5).map((b) => ({ key: b.key, label: b.name, href: b.href })),
@@ -130,12 +130,12 @@
       } else {
         const f = `title.ilike.%${t}%,content.ilike.%${t}%`;
         const [p, n] = await Promise.all([
-          sb.from("posts").select("id,title,category_id,created_at").or(f).order("created_at", { ascending: false }).limit(30),
+          sb.from("posts").select("id,title,board_id,created_at").or(f).order("created_at", { ascending: false }).limit(30),
           sb.from("notices").select("id,title,created_at").or(f).order("created_at", { ascending: false }).limit(10),
         ]);
         if (my !== seq) return;                         // 더 최신 검색이 있으면 버려요
         if (p.error && n.error) return sres.replaceChildren(h("div", { class: "shint" }, "검색하지 못했어요."));
-        rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || []).map((r) => ({ ...r, board: String(r.category_id) }))];
+        rows = [...(n.data || []).map((r) => ({ ...r, board: "notice" })), ...(p.data || []).map((r) => ({ ...r, board: String(r.board_id) }))];
       }
       if (!rows.length) return sres.replaceChildren(h("div", { class: "shint" }, "‘" + t + "’ 검색 결과가 없어요."));
       sres.replaceChildren(h("div", { class: "shint" }, rows.length + "건을 찾았어요."), ...rows.map((r) =>

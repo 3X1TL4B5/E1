@@ -66,21 +66,30 @@
   const DEMO = typeof SUPABASE_URL === "undefined" || /YOUR-PROJECT/.test(SUPABASE_URL);
   let client = null;
 
-  /* 게시판 목록: 공지사항(notices 테이블)은 고정, 나머지는 Supabase categories 테이블에서 읽어요.
-     글(posts)은 category_id 로 게시판을 구분해요. 페이지에서 GH.loadBoards() 를 먼저 불러야 채워져요. */
+  /* 게시판 목록: 공지사항(notices 테이블)은 고정, 나머지는 Supabase boards 테이블에서 읽어요.
+     글(posts)은 board_id 로 게시판을 구분해요. 페이지에서 GH.loadBoards() 를 먼저 불러야 채워져요.
+     순서: position → 상위 게시판 다음에 그 하위 게시판 */
   const NOTICE = { key: "notice", name: "공지사항", desc: "운영 소식과 안내", href: "notice.html" };
   const BOARDS = [NOTICE];
-  const DEMO_CATS = [{ id: 1, name: "자유게시판" }, { id: 2, name: "공략/팁" }, { id: 3, name: "질문/답변" }];
-  const catBoard = (c) => ({ key: String(c.id), id: c.id, name: c.name, desc: "", href: "board.html?c=" + c.id });
+  const DEMO_BOARDS = [
+    { id: 1, name: "자유게시판", description: "자유롭게 이야기해요", parent_id: null, position: 0 },
+    { id: 2, name: "공략/팁", description: "노하우를 나눠요", parent_id: null, position: 1 },
+    { id: 3, name: "질문/답변", description: "궁금한 건 여기서 물어보세요", parent_id: null, position: 2 },
+  ];
+  const toBoard = (b) => ({ key: String(b.id), id: b.id, name: b.name, desc: b.description || "", href: "board.html?b=" + b.id });
+  function ordered(rows) {
+    const top = rows.filter((b) => !b.parent_id);
+    return top.flatMap((t) => [t, ...rows.filter((b) => b.parent_id === t.id)]);
+  }
   let boardsLoaded = null;
   function loadBoards() {
     if (!boardsLoaded) boardsLoaded = (async () => {
-      let cats = DEMO_CATS;
+      let rows = DEMO_BOARDS;
       if (!DEMO) {
-        const { data, error } = await GH.sb().from("categories").select("id,name").order("id");
-        cats = error ? [] : data || [];
+        const { data, error } = await GH.sb().from("boards").select("id,name,description,parent_id,position").order("position").order("id");
+        rows = error ? [] : data || [];
       }
-      BOARDS.splice(1, BOARDS.length, ...cats.map(catBoard));
+      BOARDS.splice(1, BOARDS.length, ...ordered(rows).map(toBoard));
       return BOARDS;
     })();
     return boardsLoaded;
@@ -142,7 +151,7 @@
   window.GH = {
     DEMO, ICON, BOARDS, DEMO_DATA, h, ago, loadBoards,
     boardName: (k) => (BOARDS.find((b) => b.key === String(k)) || {}).name || "",
-    boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?c=" + k + (id ? "&id=" + id : "")),
+    boardHref: (k, id) => (k === "notice" ? "notice.html" + (id ? "?id=" + id : "") : "board.html?b=" + k + (id ? "&id=" + id : "")),
     firstBoardHref: () => (BOARDS[1] ? BOARDS[1].href : "main.html"),
     theme: { current: currentTheme, set: setTheme, sync: syncTheme },
     sb() {
