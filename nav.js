@@ -144,6 +144,8 @@
     q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => run(q.value), 300); });
 
     GH.theme.sync();
+    // 보안: 활동 없으면 10분 뒤 자동 로그아웃 (관리자는 예외)
+    if (!opts.isAdmin) GH.startIdleLogout();
   }
 
   window.E1Nav = { boards: BOARDS, boardName, init };

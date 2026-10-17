@@ -170,6 +170,51 @@
       return (created) => new Date(created).getTime() <= cut;
     },
     LOCK_MSG: "보관 중인 내용이라 수정하거나 지울 수 없어요.",
+
+    /* 자동 로그아웃: 활동이 없으면 IDLE_MIN 분 뒤 로그아웃 (관리자는 nav.js에서 제외)
+       - 여러 탭이 같은 기록(localStorage)을 써서, 한 탭에서 활동하면 다른 탭도 유지돼요.
+       - 1분 전에 알림을 띄우고 '계속 이용하기'로 연장할 수 있어요. */
+    IDLE_MIN: 10,
+    async startIdleLogout() {
+      if (GH._idle) return;
+      GH._idle = true;
+      const LIMIT = GH.IDLE_MIN * 60000, WARN = 60000, KEY = "gh-last-active";
+      const s = await GH.session();
+      if (!s) return;
+      // 방금 로그인했으면 그 시각부터 셈 (예전 기록 때문에 바로 로그아웃되지 않게)
+      const signedIn = s.user && s.user.last_sign_in_at ? new Date(s.user.last_sign_in_at).getTime() : 0;
+      let mem = 0, lastWrite = 0;                            // 저장소를 못 쓰는 브라우저 대비
+      const last = () => Math.max(Number(store.get(KEY)) || 0, mem, signedIn);
+      const touch = () => { const n = Date.now(); mem = n; if (n - lastWrite > 5000) { lastWrite = n; store.set(KEY, String(n)); } };
+      // 기록이 있는데 10분이 지났으면(탭을 닫아 뒀다가 다시 연 경우) 바로 로그아웃, 기록이 없으면 지금부터 셈
+      if (Number(store.get(KEY)) && Date.now() - last() > LIMIT) return out();
+      touch();
+      ["pointerdown", "keydown", "scroll", "touchstart", "wheel"].forEach((ev) => window.addEventListener(ev, touch, { passive: true, capture: true }));
+
+      let toast = null, timerText = null;
+      function warn(left) {
+        if (!toast) {
+          timerText = h("b", null, "");
+          const keep = h("button", { class: "primary", type: "button", onclick: () => { lastWrite = 0; touch(); hide(); } }, "계속 이용하기");
+          toast = h("div", { class: "idle-toast", role: "alertdialog", "aria-live": "assertive" },
+            h("div", null, "활동이 없어 ", timerText, " 뒤 자동으로 로그아웃돼요."), keep);
+          document.body.appendChild(toast);
+          keep.focus();
+        }
+        timerText.textContent = Math.max(1, Math.ceil(left / 1000)) + "초";
+      }
+      function hide() { if (toast) { toast.remove(); toast = null; } }
+      async function out() {
+        sess.set("gh-logout-reason", GH.IDLE_MIN + "분 동안 활동이 없어 보안을 위해 로그아웃했어요.");
+        store.set(KEY, "");
+        await GH.signOut();
+      }
+      setInterval(() => {
+        const left = LIMIT - (Date.now() - last());
+        if (left <= 0) return out();
+        if (left <= WARN) warn(left); else hide();
+      }, 1000);
+    },
     /* 게시판 이름으로 아이콘 고르기 (관리에서 새 게시판을 만들면 이름에 맞춰 자동으로 골라요) */
     boardIcon: (b) => {
       const n = (b && b.name) || "";

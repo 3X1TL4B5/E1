@@ -169,3 +169,18 @@ kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 
 
 /* 화면 묶음: 제목 + 타일을 세로로 */
 .stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* 자동 로그아웃 1분 전 알림 */
+.idle-toast {
+  position: fixed; z-index: 300; left: 50%; transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: min(440px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border-radius: 16px;
+  background: var(--ink); color: var(--on-ink); box-shadow: 0 20px 40px -16px rgba(0, 0, 0, .55);
+  font-size: 14px; line-height: 1.5;
+}
+.idle-toast > div { flex: 1; min-width: 180px; }
+.idle-toast b { color: var(--yellow); font-variant-numeric: tabular-nums; }
+.idle-toast .primary { padding: 9px 14px; font-size: 14px; }
+@media (max-width: 699px) { body.has-tabbar .idle-toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }

@@ -72,12 +72,18 @@
 
   if (GH.DEMO) $("password").removeAttribute("required");
 
+  // 자동 로그아웃으로 돌아왔으면 이유를 알려줘요
+  try {
+    const why = sessionStorage.getItem("gh-logout-reason");
+    if (why) { msg.className = "msg ok"; msg.textContent = why; sessionStorage.removeItem("gh-logout-reason"); }
+  } catch (e) {}
+
   // 이미 로그인 상태면 바로 홈으로
   GH.session().then((s) => { if (s) location.replace("main.html"); });
 
   $("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    msg.textContent = "";
+    msg.textContent = ""; msg.className = "msg";
     btn.disabled = true;
     btn.textContent = "확인 중...";
     const { error } = await GH.signIn($("email").value.trim(), pw.value);
