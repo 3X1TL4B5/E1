@@ -16,7 +16,7 @@
 
   header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--line); position:sticky; top:env(safe-area-inset-top,0); background:var(--bg); z-index:5; }
   header img { width:36px; height:36px; }
-  .who { display:flex; align-items:center; gap:12px; font-size:14px; color:var(--muted); }
+  .who { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:6px 8px; font-size:14px; color:var(--muted); }
   .who b { color:var(--text); font-weight:600; }
   .ghost { background:none; border:1px solid var(--line); color:var(--muted); padding:7px 12px; border-radius:8px; font-size:13px; }
   .ghost:hover { color:var(--text); border-color:var(--violet); }
@@ -78,7 +78,7 @@
 <section id="board-view" class="hidden">
   <header>
     <img src="logo.png" alt="E1">
-    <div class="who"><span><b id="me"></b> 님</span><a class="ghost" href="chat.html" style="text-decoration:none">채팅</a><a class="ghost hidden" id="admin-link" href="admin.html" style="text-decoration:none">관리</a><button class="ghost" id="logout">로그아웃</button></div>
+    <div class="who"><span><b id="me"></b> 님</span><a class="ghost" href="notice.html" style="text-decoration:none">공지</a><a class="ghost" href="chat.html" style="text-decoration:none">채팅</a><a class="ghost hidden" id="admin-link" href="admin.html" style="text-decoration:none">관리</a><button class="ghost" id="logout">로그아웃</button></div>
   </header>
 
   <div class="wrap">
