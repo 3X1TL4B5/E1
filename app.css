@@ -2,33 +2,37 @@
    색은 theme.css 토큰만 써요. 새 페이지 규칙은 CLAUDE.md 참고. */
 
 /* ---------- 상단바 ---------- */
+/* 가시성 우선: 불투명 배경, 진한 글자, 또렷한 아래 테두리와 그림자 */
 .top {
   position: sticky; top: 0; z-index: 50;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 10px -4px rgba(20, 16, 50, .18);
   padding-top: env(safe-area-inset-top, 0px);
 }
 .top-in {
-  max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 8px; height: 60px;
+  max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 8px; height: 64px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.brand { display: flex; align-items: center; height: 42px; text-decoration: none; font-family: var(--f-display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; margin-right: 12px; flex: none; color: var(--fg); }
+.brand { display: flex; align-items: center; height: 44px; text-decoration: none; font-family: var(--f-display); font-weight: 800; font-size: 26px; letter-spacing: -.01em; margin-right: 14px; flex: none; color: var(--fg); }
 a.brand:hover { color: var(--accent-ink); }
-.links { display: flex; gap: 2px; }
-.links a { padding: 8px 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); }
-.links a:hover { background: var(--surface-2); color: var(--fg); }
-.links a.on { color: var(--accent-ink); background: var(--accent-soft); }
+.links { display: flex; gap: 4px; }
+.links a { padding: 9px 14px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 700; color: var(--fg); }
+.links a:hover { background: var(--surface-2); color: var(--accent-ink); }
+.links a.on { color: var(--on-accent); background: var(--accent); }
 .spacer { flex: 1; }
 .search-trigger {
-  display: flex; align-items: center; gap: 8px; width: 240px; padding: 8px 10px 8px 12px; border-radius: 12px;
-  background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; width: 240px; height: 42px; padding: 0 10px 0 12px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--fg); font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .search-trigger:hover { border-color: var(--accent); }
 .search-trigger .ic svg { width: 18px; height: 18px; }
-.search-trigger .st { flex: 1; text-align: left; }
-kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
-.write-btn { padding: 9px 16px; font-size: 14px; border-radius: 12px; }
+.search-trigger .st { flex: 1; text-align: left; opacity: .75; }
+kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.top .icon-btn { color: var(--fg); }
+.top .icon-btn:hover { background: var(--surface-2); color: var(--accent-ink); }
+.top .icon-btn svg { stroke-width: 2.2; }
+.write-btn { height: 42px; padding: 0 16px; font-size: 14px; border-radius: 12px; }
 .write-btn .ic svg { width: 18px; height: 18px; }
 
 @media (max-width: 1099px) { .links { display: none; } }
@@ -76,11 +80,12 @@ kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
     padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: var(--surface);
     border-top: 1px solid var(--line);
+    box-shadow: 0 -2px 10px -4px rgba(20, 16, 50, .18);
   }
-  .tabbar a, .tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; background: none; border: 0; color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .tabbar a, .tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; background: none; border: 0; color: var(--fg); text-decoration: none; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .tabbar a:not(.on):not(.plus), .tabbar button:not(.on) { opacity: .72; }
   .tabbar .on { color: var(--accent-ink); }
   .tabbar .ic svg { width: 22px; height: 22px; }
   .tabbar .plus .ic { width: 46px; height: 34px; border-radius: 12px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }

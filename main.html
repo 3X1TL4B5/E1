@@ -334,7 +334,8 @@
   function drawOnline(list) {
     $("online-count").replaceChildren(String(list.length), h("small", null, "명"));
     const shown = list.slice(0, 5);
-    $("online-avs").replaceChildren(...shown.map(avatar), list.length > 5 ? h("span", { class: "rest" }, "+" + (list.length - 5)) : null);
+    const rest = list.length > 5 ? [h("span", { class: "rest" }, "+" + (list.length - 5))] : [];
+    $("online-avs").replaceChildren(...shown.map(avatar), ...rest);
   }
   function joinPresence() {
     if (DEMO) return drawOnline(D.online);
