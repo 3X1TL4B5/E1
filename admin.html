@@ -25,7 +25,7 @@
   .item .info { flex:1; min-width:0; }
   .item .t { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
   .item .s { font-size:12px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
-  .item .btns { display:flex; gap:6px; flex:none; }
+  .item .btns { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; flex:none; max-width:58%; }
   .tag { color:var(--danger); font-weight:400; font-size:12px; }
   .hint { font-size:13px; color:var(--muted); line-height:1.6; margin:0 0 12px; }
   form { display:flex; gap:8px; margin-bottom:12px; }
@@ -36,15 +36,11 @@
 </style>
 </head>
 <body>
-<header>
-  <img src="logo.png" alt="E1">
-  <div class="nav"><a class="ghost" href="main.html">게시판</a><a class="ghost" href="notice.html">공지</a><a class="ghost" href="chat.html">채팅</a><span class="ghost on">관리</span></div>
-</header>
 <div class="wrap">
   <div class="tabs">
     <button class="ghost on" data-tab="members">회원</button>
     <button class="ghost" data-tab="invites">초대</button>
-    <button class="ghost" data-tab="categories">카테고리</button>
+    <button class="ghost" data-tab="boards">게시판</button>
     <button class="ghost" data-tab="reserved">금지어</button>
   </div>
   <div id="panel"><div class="empty">불러오는 중...</div></div>
@@ -52,6 +48,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="nav.js"></script>
 <script>
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
@@ -139,28 +136,78 @@
     });
   }
 
-  /* 카테고리 */
-  async function loadCategories() {
-    const { data, error } = await sb.from("categories").select("id,name").order("name");
+  /* 게시판 (상위 → 하위) */
+  async function loadBoardsAdmin() {
+    const { data, error } = await sb.from("boards").select("id,parent_id,name,position").order("position").order("id");
     if (error) return empty("불러오지 못했어요: " + error.message);
-    if (!data.length) return empty("카테고리가 없어요. 글을 쓰면서 만들어져요.");
     panel.replaceChildren();
-    data.forEach(c => panel.appendChild(item(c.name, "", "", [
-      { label: "이름 변경", fn: async () => {
-        const n = (prompt("새 이름 (1~20자)", c.name) || "").trim();
-        if (!n || n === c.name) return;
-        if (n.length > 20) return alert("20자까지만 쓸 수 있어요.");
-        const { error } = await sb.from("categories").update({ name: n }).eq("id", c.id);
-        if (error) return alert(error.code === "23505" ? "이미 있는 카테고리예요." : error.message);
-        loadCategories();
-      } },
-      { label: "삭제", danger: true, fn: async () => {
-        if (!confirm("'" + c.name + "' 카테고리를 삭제할까요? 이 카테고리의 글은 분류 없음이 돼요.")) return;
-        const { error } = await sb.from("categories").delete().eq("id", c.id);
-        if (error) return alert(error.message);
-        loadCategories();
-      } }
-    ])));
+    const groups = data.filter(b => !b.parent_id), kids = (id) => data.filter(b => b.parent_id === id);
+    const maxPos = (list) => list.reduce((m, b) => Math.max(m, b.position), -1);
+    const dupe = (r) => r.error && (r.error.code === "23505" ? alert("같은 이름이 이미 있어요.") : alert(r.error.message));
+
+    const hint = document.createElement("p"); hint.className = "hint";
+    hint.textContent = "상위 게시판 아래에 하위 게시판을 만들어요. 회원은 하위 게시판에 글을 써요. 삭제해도 글은 남고, 전체 글에서만 보여요.";
+    const f = document.createElement("form");
+    const i = document.createElement("input"); i.placeholder = "새 상위 게시판 이름"; i.maxLength = 20;
+    const a = document.createElement("button"); a.className = "add"; a.textContent = "추가";
+    f.append(i, a);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const name = i.value.trim(); if (!name) return;
+      const r = await sb.from("boards").insert({ name, parent_id: null, position: maxPos(groups) + 1 });
+      if (r.error) return dupe(r);
+      loadBoardsAdmin();
+    };
+    panel.append(hint, f);
+    if (!groups.length) { const d = document.createElement("div"); d.className = "empty"; d.textContent = "아직 게시판이 없어요."; panel.appendChild(d); return; }
+
+    const rename = async (b) => {
+      const n = (prompt("새 이름 (1~20자)", b.name) || "").trim();
+      if (!n || n === b.name) return;
+      if (n.length > 20) return alert("20자까지만 쓸 수 있어요.");
+      const r = await sb.from("boards").update({ name: n }).eq("id", b.id);
+      if (r.error) return dupe(r);
+      loadBoardsAdmin();
+    };
+    const move = async (list, idx, dir) => {
+      const j = idx + dir; if (j < 0 || j >= list.length) return;
+      const arr = list.slice(); [arr[idx], arr[j]] = [arr[j], arr[idx]];
+      await Promise.all(arr.map((b, n) => b.position !== n ? sb.from("boards").update({ position: n }).eq("id", b.id) : null).filter(Boolean));
+      loadBoardsAdmin();
+    };
+    const remove = async (b, isGroup) => {
+      const msg = isGroup ? "'" + b.name + "' 상위 게시판과 그 아래 하위 게시판을 모두 삭제할까요? 글은 남아요." : "'" + b.name + "' 하위 게시판을 삭제할까요? 글은 남아요.";
+      if (!confirm(msg)) return;
+      const r = await sb.from("boards").delete().eq("id", b.id);
+      if (r.error) return alert(r.error.message);
+      loadBoardsAdmin();
+    };
+
+    groups.forEach((g, gi) => {
+      const subs = kids(g.id);
+      panel.appendChild(item(g.name, "하위 게시판 " + subs.length + "개", "", [
+        { label: "+하위", fn: async () => {
+          const n = (prompt("하위 게시판 이름 (1~20자)") || "").trim(); if (!n) return;
+          if (n.length > 20) return alert("20자까지만 쓸 수 있어요.");
+          const r = await sb.from("boards").insert({ name: n, parent_id: g.id, position: maxPos(subs) + 1 });
+          if (r.error) return dupe(r);
+          loadBoardsAdmin();
+        } },
+        { label: "이름", fn: () => rename(g) },
+        { label: "↑", fn: () => move(groups, gi, -1) },
+        { label: "↓", fn: () => move(groups, gi, 1) },
+        { label: "삭제", danger: true, fn: () => remove(g, true) }
+      ]));
+      subs.forEach((c, ci) => {
+        const row = item("└ " + c.name, "", "", [
+          { label: "이름", fn: () => rename(c) },
+          { label: "↑", fn: () => move(subs, ci, -1) },
+          { label: "↓", fn: () => move(subs, ci, 1) },
+          { label: "삭제", danger: true, fn: () => remove(c, false) }
+        ]);
+        row.style.marginLeft = "14px"; panel.appendChild(row);
+      });
+    });
   }
 
   /* 금지어 */
@@ -189,7 +236,7 @@
     } }])));
   }
 
-  const tabs = { members: loadMembers, invites: loadInvites, categories: loadCategories, reserved: loadReserved };
+  const tabs = { members: loadMembers, boards: loadBoardsAdmin, invites: loadInvites, reserved: loadReserved };
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
     document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
     empty("불러오는 중..."); tabs[b.dataset.tab]();
@@ -201,6 +248,7 @@
     me = data.session.user;
     const a = await sb.from("admins").select("user_id").eq("user_id", me.id).maybeSingle();
     if (!a.data) return location.replace("main.html");      // 관리자가 아니면 게시판으로
+    E1Nav.init(sb, { active: "admin", isAdmin: true });
     loadMembers();
   })();
 </script>
